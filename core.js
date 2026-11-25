@@ -5169,7 +5169,6 @@ function _vAttend() {
   if (_ST) setTimeout(function () { _switchTab(_ST); }, 30);
 }
 
-
 function _loadFieldAttendance() {
   var el = document.getElementById('fieldAttContent');
   if (!el) return;
@@ -5184,7 +5183,7 @@ function _loadFieldAttendance() {
     rows.forEach(function (r) {
       html += '<div style="display:flex;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;background:#fff;align-items:flex-start">' +
         (r.photo_url
-          ? '<img src="' + r.photo_url + '" style="width:100px;height:100px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.style.display=\'none\'">'
+          ? '<img src="' + r.photo_url + '" style="width:100px;height:100px;object-fit:cover;border-radius:8px;flex-shrink:0">'
           : '<div style="width:100px;height:100px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">No Photo</div>') +
         '<div style="flex:1">' +
         '<div style="font-weight:700">' + _esc(r.emp_name) + '</div>' +
@@ -5196,7 +5195,7 @@ function _loadFieldAttendance() {
     });
     el.innerHTML = html;
   }, function (err) {
-    el.innerHTML = '<div style="padding:20px;color:var(--R)">Failed to load: ' + _esc(err.message || 'Error') + '</div>';
+    el.innerHTML = '<div style="padding:20px;color:var(--R)">Error: ' + _esc(err.message || 'Failed to load') + '</div>';
   });
 }
 
