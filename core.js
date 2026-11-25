@@ -15916,18 +15916,6 @@ function _showFieldAttendance() {
 
 
 
-function _loadFieldAttendance() {
-  var el = document.getElementById('fieldAttContent');
-  if (!el) return;
-  el.innerHTML = '<div style="padding:20px;color:var(--tx3)">Loading…</div>';
-
-  _gas('getFieldAttendance', [], function (rows) {
-    window._fieldAttRows = rows || [];
-    _renderFieldAttendance();
-  }, function (err) {
-    el.innerHTML = '<div style="padding:20px;color:var(--R)">Error: ' + _esc(err.message || 'Failed') + '</div>';
-  });
-}
 
 function _renderFieldAttendance() {
   var el = document.getElementById('fieldAttContent');
@@ -15983,4 +15971,87 @@ function _renderFieldAttendance() {
   }
   html += '</div>';
   el.innerHTML = html;
+}
+
+
+
+
+var _fieldAttData = [];
+var _fieldAttDate = '';
+
+function _loadFieldAttendance() {
+  var el = document.getElementById('fieldAttContent');
+  if (!el) return;
+
+  var dateVal = (document.getElementById('faDate') || {}).value || _fieldAttDate || _today();
+  _fieldAttDate = dateVal;
+
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--sur2);border-radius:12px;border:1px solid var(--bdr)">' +
+    '<input type="date" id="faDate" class="ana-sel" style="max-width:140px" value="' + dateVal + '">' +
+    '<div style="width:1px;height:24px;background:var(--bdr)"></div>' +
+    '<select id="faDept" class="ana-sel" style="min-width:140px"><option value="">All Departments</option></select>' +
+    '<input type="text" id="faSearch" class="ana-sel" placeholder="Search name..." style="min-width:160px">' +
+    '<div style="flex:1"></div>' +
+    '<button class="btn btn-sm" onclick="_loadFieldAttendance()"><i class="fas fa-rotate-right"></i> Reload</button>' +
+    '</div>' +
+    '<div id="faStats" style="display:flex;gap:8px;margin-bottom:12px"></div>' +
+    '<div id="faList"></div>';
+
+  document.getElementById('faDate').onchange = function () { _fieldAttDate = this.value; _renderFieldList(); };
+  document.getElementById('faDept').onchange = _renderFieldList;
+  document.getElementById('faSearch').oninput = _renderFieldList;
+
+  el.querySelector('#faList').innerHTML = '<div style="padding:32px;text-align:center;color:var(--tx3)"><i class="fas fa-spinner fa-spin"></i></div>';
+
+  _gas('getFieldAttendance', [], function (rows) {
+    _fieldAttData = rows || [];
+    var depts = [];
+    _fieldAttData.forEach(function (r) { if (r.dept && depts.indexOf(r.dept) === -1) depts.push(r.dept); });
+    var sel = document.getElementById('faDept');
+    if (sel) sel.innerHTML = '<option value="">All Departments</option>' + depts.map(function (d) { return '<option>' + _esc(d) + '</option>'; }).join('');
+    _renderFieldList();
+  });
+}
+
+function _renderFieldList() {
+  var list = document.getElementById('faList');
+  var stats = document.getElementById('faStats');
+  if (!list) return;
+
+  var dateF = (document.getElementById('faDate') || {}).value || '';
+  var deptF = (document.getElementById('faDept') || {}).value || '';
+  var q = ((document.getElementById('faSearch') || {}).value || '').toLowerCase();
+
+  var rows = _fieldAttData.filter(function (r) {
+    if (dateF && r.date !== dateF) return false;
+    if (deptF && r.dept !== deptF) return false;
+    if (q && (r.emp_name + ' ' + r.dept).toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  });
+
+  if (stats) {
+    stats.innerHTML =
+      '<div style="flex:1;padding:10px;background:var(--Pl);border-radius:10px;text-align:center"><div style="font-size:20px;font-weight:900;color:var(--P)">' + rows.length + '</div><div style="font-size:10px;font-weight:800;color:var(--P);text-transform:uppercase">Records</div></div>' +
+      '<div style="flex:1;padding:10px;background:var(--Gl);border-radius:10px;text-align:center"><div style="font-size:20px;font-weight:900;color:var(--G)">' + _fieldAttData.length + '</div><div style="font-size:10px;font-weight:800;color:var(--G);text-transform:uppercase">Total</div></div>';
+  }
+
+  if (!rows.length) {
+    list.innerHTML = '<div style="padding:32px;text-align:center;color:var(--tx3)">No records for selected filters.</div>';
+    return;
+  }
+
+  list.innerHTML = rows.map(function (r) {
+    return '<div style="display:flex;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:8px;background:#fff;align-items:flex-start">' +
+      (r.photo_url
+        ? '<img src="' + r.photo_url + '" style="width:90px;height:90px;object-fit:cover;border-radius:8px;flex-shrink:0">'
+        : '<div style="width:90px;height:90px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px">No Photo</div>') +
+      '<div style="flex:1">' +
+      '<div style="font-weight:700">' + _esc(r.emp_name) + '</div>' +
+      '<div style="font-size:12px;color:var(--tx3)">' + _esc(r.dept) + '</div>' +
+      '<div style="font-size:13px;margin-top:4px">' + _esc(r.date) + ' · <b>' + _esc(r.check_in) + '</b></div>' +
+      (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</div>' : '') +
+      (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
+      '</div></div>';
+  }).join('');
 }
