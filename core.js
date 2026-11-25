@@ -2435,17 +2435,15 @@ function _doCheckInCall(btn, payload) {
       }
       _toast((res && res.error) || 'Check-in failed', 'err');
     }
-  }, function (err) {
-    // Error callback — important for phone
-    _punchState = prevState;
-    _renderPunchCard({ status: prevState });
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check IN';
-    }
-    _toast('Save failed: ' + (err.message || 'Network/size error'), 'err');
-    console.error('[recordCheckIn error]', err);
-  });
+}, function (err) {
+  _punchState = prevState;
+  _renderPunchCard({ status: prevState });
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check IN';
+  }
+  _toast('Save failed: ' + (err.message || JSON.stringify(err)), 'err');
+});
 }
 
     function _doCheckOutCall(btn, payload) {
