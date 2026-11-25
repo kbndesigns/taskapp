@@ -2388,70 +2388,65 @@
     }
 
     // GPS-aware check-in call — payload can be {ts,lat,lng} or plain timestamp string
-    function _doCheckInCall(btn, payload) {
-      // Optimistic: turant UI update
-      var nowStr = new Date().toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit', hour12: true});
-      var prevState = _punchState;
+function _doCheckInCall(btn, payload) {
+  var nowStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  var prevState = _punchState;
+  _punchState = 'checked_in';
+  _renderPunchCard({
+    status: 'checked_in',
+    check_in: nowStr,
+    check_in_ts: (typeof payload === 'object' ? payload.ts : payload) || new Date().toISOString()
+  });
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving...';
+  }
+
+  // Compress photo if too large (phone photos are big)
+  if (payload && payload.photo_base64 && payload.photo_base64.length > 500000) {
+    // Already compressed in capture, but extra safety
+    console.log('[FieldAtt] Photo size:', Math.round(payload.photo_base64.length / 1024) + 'KB');
+  }
+
+  _gas('recordCheckIn', [payload], function (res) {
+    if (res && res.success) {
       _punchState = 'checked_in';
+      _toast('✓ Checked in at ' + (res.check_in || nowStr), 'ok');
+      _addNtf('Check IN at ' + (res.check_in || nowStr), 'fa-sign-in-alt', 'var(--Gl)', 'var(--G)');
       _renderPunchCard({
         status: 'checked_in',
-        check_in: nowStr,
-        check_in_ts: (typeof payload === 'object' ? payload.ts : payload) || new Date().toISOString()
+        check_in: res.check_in || nowStr,
+        check_in_ts: res.timestamp || ''
       });
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving...';
+      if (_D.todayAtt) {
+        _D.todayAtt.status = 'checked_in';
+        _D.todayAtt.check_in = res.check_in || nowStr;
       }
-
-      _gas('recordCheckIn', [payload], function (res) {
-        if (res && res.success) {
-          _punchState = 'checked_in';
-          _toast('✓ Checked in at ' + (res.check_in || nowStr), 'ok');
-          _addNtf('Check IN at ' + (res.check_in || nowStr), 'fa-sign-in-alt', 'var(--Gl)', 'var(--G)');
-          _renderPunchCard({
-            status: 'checked_in',
-            check_in: res.check_in || nowStr,
-            check_in_ts: res.timestamp || ''
-          });
-          if (_D.todayAtt) {
-            _D.todayAtt.status = 'checked_in';
-            _D.todayAtt.check_in = res.check_in || nowStr;
-          }
-          _lcSave();
-          _gpsState = 'unchecked';
-          _initGpsGate();
-        } else {
-          // Rollback
-          _punchState = prevState;
-          var errMsg = (res && res.error) ? res.error : 'Unknown error';
-          if (errMsg.indexOf('GPS_BLOCKED:') === 0) {
-            errMsg = errMsg.replace('GPS_BLOCKED:', '');
-            _toast('📍 ' + errMsg, 'err');
-          } else {
-            _toast('Check-in failed: ' + errMsg, 'err');
-          }
-          _loadPunchStatus(); // server se sahi state lao
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check IN';
-          }
-        }
-      }, function (e) {
-        // Rollback on network error
-        _punchState = prevState;
-        var msg = (e && e.message) ? e.message : 'Network error';
-        if (msg.indexOf('GPS_BLOCKED:') === 0) {
-          _toast('📍 ' + msg.replace('GPS_BLOCKED:', ''), 'err');
-        } else {
-          _toast('Check-in failed: ' + msg, 'err');
-        }
-        _loadPunchStatus();
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check IN';
-        }
-      });
+      _lcSave();
+      _gpsState = 'unchecked';
+      _initGpsGate();
+    } else {
+      // Rollback
+      _punchState = prevState;
+      _renderPunchCard({ status: prevState });
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check IN';
+      }
+      _toast((res && res.error) || 'Check-in failed', 'err');
     }
+  }, function (err) {
+    // Error callback — important for phone
+    _punchState = prevState;
+    _renderPunchCard({ status: prevState });
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check IN';
+    }
+    _toast('Save failed: ' + (err.message || 'Network/size error'), 'err');
+    console.error('[recordCheckIn error]', err);
+  });
+}
 
     function _doCheckOutCall(btn, payload) {
       // Optimistic
@@ -15849,7 +15844,7 @@ function _captureFieldAttendance(btn, label, icon, deviceTs, onReady) {
     ctx.fillText(locText, 16, c.height - 16);
 
     var preview = document.getElementById('fcPreview');
-    preview.src = c.toDataURL('image/jpeg', 0.8);
+    preview.src = c.toDataURL('image/jpeg', 0.65);
     preview.style.display = 'block';
     v.style.display = 'none';
     document.getElementById('fcCapture').style.display = 'none';
