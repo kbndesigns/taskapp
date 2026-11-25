@@ -5154,6 +5154,7 @@ if (_U && _U.need_location === false) {
       if (_isMarkAttendanceAllowed()) {
         tabs.push({id: 'amteam', lbl: '<i class="fas fa-user-check"></i> Mark Team Attendance'});
         panes.push('<div id="amteamPane">' + _amTeamForm() + '</div>');
+'<button class="tab-btn" onclick="_showFieldAttendance()"><i class="fas fa-camera"></i> Field Attendance</button>'
       }
 
       var at = _ST || (needsAtt ? 'amy' : 'areg');
@@ -15766,21 +15767,23 @@ function _loadEmpDetail(empId) {
 function _captureFieldAttendance(btn, label, icon, deviceTs, onReady) {
   btn.innerHTML = '<i class="fas fa-camera fa-spin"></i> Capture Photo + Location';
 
-  // Location
   navigator.geolocation.getCurrentPosition(function (pos) {
     var lat = pos.coords.latitude;
     var lng = pos.coords.longitude;
     var ts = new Date().toLocaleString('en-IN', { hour12: true });
 
-    // Camera
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.capture = 'environment';
     input.onchange = function (e) {
       var file = e.target.files[0];
-      if (!file) { _toast('Photo required', 'err'); btn.disabled = false; btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label; return; }
-
+      if (!file) {
+        _toast('Photo required', 'err');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
+        return;
+      }
       var reader = new FileReader();
       reader.onload = function (ev) {
         var img = new Image();
@@ -15791,22 +15794,16 @@ function _captureFieldAttendance(btn, label, icon, deviceTs, onReady) {
           var ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0);
 
-          // Overlay
           ctx.fillStyle = 'rgba(0,0,0,0.65)';
-          ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
+          ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
           ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 28px Arial';
-          ctx.fillText('Lat: ' + lat.toFixed(5) + '  Lng: ' + lng.toFixed(5), 20, canvas.height - 50);
-          ctx.font = '22px Arial';
-          ctx.fillText(ts, 20, canvas.height - 18);
+          ctx.font = 'bold 26px Arial';
+          ctx.fillText('Lat: ' + lat.toFixed(5) + '  Lng: ' + lng.toFixed(5), 16, canvas.height - 55);
+          ctx.font = '20px Arial';
+          ctx.fillText(ts, 16, canvas.height - 20);
 
           var base64 = canvas.toDataURL('image/jpeg', 0.75);
-          onReady({
-            ts: deviceTs,
-            lat: lat,
-            lng: lng,
-            photo_base64: base64
-          });
+          onReady({ ts: deviceTs, lat: lat, lng: lng, photo_base64: base64 });
         };
         img.src = ev.target.result;
       };
@@ -15817,9 +15814,33 @@ function _captureFieldAttendance(btn, label, icon, deviceTs, onReady) {
     _toast('Location required for field attendance', 'err');
     btn.disabled = false;
     btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
-  }, { enableHighAccuracy: true, timeout: 10000 });
+  }, { enableHighAccuracy: true, timeout: 12000 });
 }
 
+function _showFieldAttendance() {
+  _gas('getFieldAttendance', [], function (rows) {
+    var html = '<div style="padding:12px"><h3 style="margin:0 0 12px">Field Attendance</h3>';
+    if (!rows || !rows.length) {
+      html += '<div style="color:var(--tx3)">No field attendance records yet.</div>';
+    } else {
+      rows.forEach(function (r) {
+        html += '<div style="display:flex;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;background:#fff">' +
+          (r.photo_url ? '<img src="' + r.photo_url + '" style="width:120px;height:120px;object-fit:cover;border-radius:8px">' : '<div style="width:120px;height:120px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af">No Photo</div>') +
+          '<div style="flex:1">' +
+          '<div style="font-weight:700">' + _esc(r.emp_name) + ' <span style="font-weight:400;color:var(--tx3)">(' + _esc(r.dept) + ')</span></div>' +
+          '<div style="font-size:13px;margin-top:4px">' + _esc(r.date) + ' · Check-in: <b>' + _esc(r.check_in) + '</b></div>' +
+          (r.captured_lat ? '<div style="font-size:12.5px;color:var(--tx2);margin-top:4px">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</div>' : '') +
+          (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
+          '</div></div>';
+      });
+    }
+    html += '</div>';
+    var container = document.getElementById('attendContent') || document.querySelector('.attend-body') || document.getElementById('mainContent');
+    if (container) container.innerHTML = html;
+  }, function (err) {
+    _toast(err.message || 'Failed to load field attendance', 'err');
+  });
+}
 
 
 
