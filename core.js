@@ -15765,78 +15765,113 @@ function _loadEmpDetail(empId) {
 
 function _captureFieldAttendance(btn, label, icon, deviceTs, onReady) {
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-camera fa-spin"></i> Getting location…';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening camera…';
 
-  navigator.geolocation.getCurrentPosition(function (pos) {
-    var lat = pos.coords.latitude;
-    var lng = pos.coords.longitude;
-    var tsText = new Date().toLocaleString('en-IN', { hour12: true, timeZone: 'Asia/Kolkata' });
+  // Modal for camera
+  var old = document.getElementById('fieldCamModal');
+  if (old) old.remove();
 
-    btn.innerHTML = '<i class="fas fa-camera"></i> Open Camera';
+  var modal = document.createElement('div');
+  modal.id = 'fieldCamModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999999;display:flex;align-items:center;justify-content:center;padding:12px';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:16px;padding:16px;width:100%;max-width:420px;max-height:90vh;overflow:auto">' +
+    '<div style="font-weight:700;font-size:16px;margin-bottom:12px">Field Attendance Photo</div>' +
+    '<video id="fcVideo" autoplay playsinline style="width:100%;border-radius:12px;background:#000;max-height:260px;display:none"></video>' +
+    '<canvas id="fcCanvas" style="display:none"></canvas>' +
+    '<img id="fcPreview" style="width:100%;border-radius:12px;margin-top:10px;display:none">' +
+    '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
+    '<button id="fcStart" class="btn btn-sm btn-outline">Open Camera</button>' +
+    '<button id="fcCapture" class="btn btn-sm btn-primary" style="display:none">Capture</button>' +
+    '<button id="fcRetake" class="btn btn-sm btn-outline" style="display:none">Retake</button>' +
+    '<button id="fcUse" class="btn btn-sm btn-primary" style="display:none">Use Photo</button>' +
+    '<button id="fcCancel" class="btn btn-sm btn-ghost">Cancel</button>' +
+    '</div>' +
+    '<div id="fcStatus" style="font-size:12px;color:#64748b;margin-top:8px">Getting location…</div>' +
+    '</div>';
+  document.body.appendChild(modal);
 
-    // Hidden file input — prevent page reload issues
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    input.style.position = 'absolute';
-    input.style.left = '-9999px';
-    document.body.appendChild(input);
+  var stream = null;
+  var locText = 'Lat: --  Lng: --';
+  var lat = 0, lng = 0;
 
-    input.onchange = function () {
-      var file = input.files && input.files[0];
-      document.body.removeChild(input);
-      if (!file) {
-        _toast('Photo cancelled', 'warn');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
-        return;
-      }
+  // Location
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      lat = pos.coords.latitude;
+      lng = pos.coords.longitude;
+      locText = 'Lat: ' + lat.toFixed(5) + '  Lng: ' + lng.toFixed(5);
+      document.getElementById('fcStatus').textContent = locText;
+    }, function () {
+      document.getElementById('fcStatus').textContent = 'Location unavailable (will stamp as --)';
+    }, { enableHighAccuracy: true, timeout: 8000 });
+  }
 
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
-
-      var reader = new FileReader();
-      reader.onload = function (ev) {
-        var img = new Image();
-        img.onload = function () {
-          var canvas = document.createElement('canvas');
-          var maxW = 1280;
-          var scale = Math.min(1, maxW / img.width);
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          var ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          // Overlay bar
-          var barH = Math.max(70, Math.round(canvas.height * 0.12));
-          ctx.fillStyle = 'rgba(0,0,0,0.7)';
-          ctx.fillRect(0, canvas.height - barH, canvas.width, barH);
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold ' + Math.round(barH * 0.28) + 'px Arial';
-          ctx.fillText('Lat: ' + lat.toFixed(5) + '  Lng: ' + lng.toFixed(5), 12, canvas.height - barH + 28);
-          ctx.font = Math.round(barH * 0.22) + 'px Arial';
-          ctx.fillText(tsText, 12, canvas.height - 12);
-
-          var base64 = canvas.toDataURL('image/jpeg', 0.72);
-          onReady({ ts: deviceTs, lat: lat, lng: lng, photo_base64: base64 });
-        };
-        img.onerror = function () {
-          _toast('Image load failed', 'err');
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    };
-
-    // Trigger camera
-    input.click();
-  }, function (err) {
-    _toast('Location required: ' + (err.message || 'permission denied'), 'err');
+  document.getElementById('fcCancel').onclick = function () {
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    modal.remove();
     btn.disabled = false;
     btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
-  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  };
+
+  document.getElementById('fcStart').onclick = function () {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      .then(function (s) {
+        stream = s;
+        var v = document.getElementById('fcVideo');
+        v.srcObject = s;
+        v.style.display = 'block';
+        document.getElementById('fcCapture').style.display = 'inline-block';
+        document.getElementById('fcStart').style.display = 'none';
+      })
+      .catch(function () {
+        alert('Camera permission denied. Please allow camera.');
+      });
+  };
+
+  document.getElementById('fcCapture').onclick = function () {
+    var v = document.getElementById('fcVideo');
+    var c = document.getElementById('fcCanvas');
+    c.width = v.videoWidth || 1280;
+    c.height = v.videoHeight || 720;
+    var ctx = c.getContext('2d');
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+
+    // Overlay
+    var barH = 70;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, c.height - barH, c.width, barH);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px Arial';
+    var now = new Date().toLocaleString('en-IN', { hour12: true, timeZone: 'Asia/Kolkata' });
+    ctx.fillText(now, 16, c.height - 42);
+    ctx.font = '16px Arial';
+    ctx.fillText(locText, 16, c.height - 16);
+
+    var preview = document.getElementById('fcPreview');
+    preview.src = c.toDataURL('image/jpeg', 0.8);
+    preview.style.display = 'block';
+    v.style.display = 'none';
+    document.getElementById('fcCapture').style.display = 'none';
+    document.getElementById('fcRetake').style.display = 'inline-block';
+    document.getElementById('fcUse').style.display = 'inline-block';
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+  };
+
+  document.getElementById('fcRetake').onclick = function () {
+    document.getElementById('fcPreview').style.display = 'none';
+    document.getElementById('fcRetake').style.display = 'none';
+    document.getElementById('fcUse').style.display = 'none';
+    document.getElementById('fcStart').style.display = 'inline-block';
+    document.getElementById('fcStart').click();
+  };
+
+  document.getElementById('fcUse').onclick = function () {
+    var preview = document.getElementById('fcPreview');
+    var base64 = preview.src;
+    modal.remove();
+    onReady({ ts: deviceTs, lat: lat, lng: lng, photo_base64: base64 });
+  };
 }
 
 
