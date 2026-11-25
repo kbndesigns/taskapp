@@ -2553,10 +2553,10 @@
       btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...';
 
       // NeedLocation = No → skip GPS entirely, punch straight away
-      if (_U && _U.need_location === false) {
-        onReady(deviceTs);
-        return;
-      }
+if (_U && _U.need_location === false) {
+  _captureFieldAttendance(btn, label, icon, deviceTs, onReady);
+  return;
+}
 
       var gpsEnabled = _D.appConfig && (_D.appConfig.GPS_ATTENDANCE || '').toLowerCase() === 'yes';
       if (!gpsEnabled) {onReady(deviceTs); return;}
@@ -15761,3 +15761,65 @@ function _loadEmpDetail(empId) {
 
 /* Warm-up: wake Vercel function + Apps Script while the user is on the login screen */
 (function () {try {fetch('/api/rpc', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({fn: 'serverUptime', args: []})}).catch(function () { });} catch (e) { }})();
+
+
+function _captureFieldAttendance(btn, label, icon, deviceTs, onReady) {
+  btn.innerHTML = '<i class="fas fa-camera fa-spin"></i> Capture Photo + Location';
+
+  // Location
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+    var ts = new Date().toLocaleString('en-IN', { hour12: true });
+
+    // Camera
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function (e) {
+      var file = e.target.files[0];
+      if (!file) { _toast('Photo required', 'err'); btn.disabled = false; btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label; return; }
+
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var img = new Image();
+        img.onload = function () {
+          var canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+
+          // Overlay
+          ctx.fillStyle = 'rgba(0,0,0,0.65)';
+          ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 28px Arial';
+          ctx.fillText('Lat: ' + lat.toFixed(5) + '  Lng: ' + lng.toFixed(5), 20, canvas.height - 50);
+          ctx.font = '22px Arial';
+          ctx.fillText(ts, 20, canvas.height - 18);
+
+          var base64 = canvas.toDataURL('image/jpeg', 0.75);
+          onReady({
+            ts: deviceTs,
+            lat: lat,
+            lng: lng,
+            photo_base64: base64
+          });
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }, function () {
+    _toast('Location required for field attendance', 'err');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+
+
+
