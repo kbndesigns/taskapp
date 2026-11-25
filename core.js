@@ -5147,7 +5147,6 @@ function _vAttend() {
     tabs.push({id: 'amteam', lbl: '<i class="fas fa-user-check"></i> Mark Team Attendance'});
     panes.push('<div id="amteamPane">' + _amTeamForm() + '</div>');
 
-    // Field Attendance tab — yahan add karo
     tabs.push({id: 'afield', lbl: '<i class="fas fa-camera"></i> Field Attendance'});
     panes.push('<div id="afieldPane"><div id="fieldAttContent" style="padding:12px">Loading…</div></div>');
   }
@@ -5164,10 +5163,23 @@ function _vAttend() {
   else if (at === 'areg') _loadMyRegularizations();
   else if (at === 'arega' && _isManager()) _loadRegApprovals();
   else if (at === 'amteam' && _isMarkAttendanceAllowed()) _loadTeamAtt();
-  else if (at === 'afield') _loadFieldAttendance();   // ← ye line add karo
+  else if (at === 'afield') _loadFieldAttendance();
+
+  // Tab click pe load
+  setTimeout(function () {
+    var btns = document.querySelectorAll('.tab-btn, [data-tab]');
+    btns.forEach(function (b) {
+      if ((b.getAttribute('data-tab') === 'afield') || (b.textContent && b.textContent.indexOf('Field Attendance') > -1)) {
+        b.addEventListener('click', function () {
+          setTimeout(_loadFieldAttendance, 80);
+        });
+      }
+    });
+  }, 50);
 
   if (_ST) setTimeout(function () { _switchTab(_ST); }, 30);
 }
+
 
 function _loadFieldAttendance() {
   var el = document.getElementById('fieldAttContent');
@@ -5195,10 +5207,9 @@ function _loadFieldAttendance() {
     });
     el.innerHTML = html;
   }, function (err) {
-    el.innerHTML = '<div style="padding:20px;color:var(--R)">Error: ' + _esc(err.message || 'Failed to load') + '</div>';
+    el.innerHTML = '<div style="padding:20px;color:var(--R)">Error: ' + _esc(err.message || 'Failed') + '</div>';
   });
 }
-
 
 
     // Regularize form (employee self-regularization request)
