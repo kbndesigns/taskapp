@@ -5128,42 +5128,78 @@ if (_U && _U.need_location === false) {
     /* ══════════════════════════════════════════════════════════
        ATTENDANCE MODULE
     ══════════════════════════════════════════════════════════ */
-    function _vAttend() {
-      var needsAtt = !_U || _U.need_attendance !== false;
-      var tabs = [], panes = [];
+function _vAttend() {
+  var needsAtt = !_U || _U.need_attendance !== false;
+  var tabs = [], panes = [];
 
-      if (needsAtt) {
-        tabs.push({id: 'amy', lbl: '<i class="fas fa-user-clock"></i> My Attendance'});
-        panes.push('<div id="amyPane">' + _amyForm() + '</div>');
-      }
-      tabs.push({id: 'areg', lbl: '<i class="fas fa-pen-to-square"></i> Regularize'});
-      panes.push('<div id="aregPane">' + _aregForm() + '</div>');
+  if (needsAtt) {
+    tabs.push({id: 'amy', lbl: '<i class="fas fa-user-clock"></i> My Attendance'});
+    panes.push('<div id="amyPane">' + _amyForm() + '</div>');
+  }
+  tabs.push({id: 'areg', lbl: '<i class="fas fa-pen-to-square"></i> Regularize'});
+  panes.push('<div id="aregPane">' + _aregForm() + '</div>');
 
-      if (_isManager()) {
-        tabs.push({id: 'arega', lbl: '<i class="fas fa-clipboard-check"></i> Reg. Approvals'});
-        panes.push('<div id="aregaPane">' + _aregaForm() + '</div>');
-        // Muster tab removed — now available in Attendance Analytics → Muster Grid view
-      }
-      if (_isMarkAttendanceAllowed()) {
-        tabs.push({id: 'amteam', lbl: '<i class="fas fa-user-check"></i> Mark Team Attendance'});
-        panes.push('<div id="amteamPane">' + _amTeamForm() + '</div>');
-'<button class="tab-btn" onclick="_showFieldAttendance()"><i class="fas fa-camera"></i> Field Attendance</button>'
-      }
+  if (_isManager()) {
+    tabs.push({id: 'arega', lbl: '<i class="fas fa-clipboard-check"></i> Reg. Approvals'});
+    panes.push('<div id="aregaPane">' + _aregaForm() + '</div>');
+  }
+  if (_isMarkAttendanceAllowed()) {
+    tabs.push({id: 'amteam', lbl: '<i class="fas fa-user-check"></i> Mark Team Attendance'});
+    panes.push('<div id="amteamPane">' + _amTeamForm() + '</div>');
 
-      var at = _ST || (needsAtt ? 'amy' : 'areg');
+    // Field Attendance tab — yahan add karo
+    tabs.push({id: 'afield', lbl: '<i class="fas fa-camera"></i> Field Attendance'});
+    panes.push('<div id="afieldPane"><div id="fieldAttContent" style="padding:12px">Loading…</div></div>');
+  }
 
-      document.getElementById('content').innerHTML =
-        '<div class="mod-head">' +
-        '<div><div class="mod-title">Attendance & Leave</div>' +
-        '<div class="mod-sub">Punch records, regularization & team attendance (incl. Week Off / PTO)</div></div></div>' +
-        _mkTabs(tabs, at) + _mkPanes(tabs, at, panes);
+  var at = _ST || (needsAtt ? 'amy' : 'areg');
 
-      if (at === 'amy' && needsAtt) _loadMyAtt();
-      else if (at === 'areg') _loadMyRegularizations();
-      else if (at === 'arega' && _isManager()) _loadRegApprovals();
-      else if (at === 'amteam' && _isMarkAttendanceAllowed()) _loadTeamAtt();
-      if (_ST) setTimeout(function () {_switchTab(_ST);}, 30);
+  document.getElementById('content').innerHTML =
+    '<div class="mod-head">' +
+    '<div><div class="mod-title">Attendance & Leave</div>' +
+    '<div class="mod-sub">Punch records, regularization & team attendance (incl. Week Off / PTO)</div></div></div>' +
+    _mkTabs(tabs, at) + _mkPanes(tabs, at, panes);
+
+  if (at === 'amy' && needsAtt) _loadMyAtt();
+  else if (at === 'areg') _loadMyRegularizations();
+  else if (at === 'arega' && _isManager()) _loadRegApprovals();
+  else if (at === 'amteam' && _isMarkAttendanceAllowed()) _loadTeamAtt();
+  else if (at === 'afield') _loadFieldAttendance();   // ← ye line add karo
+
+  if (_ST) setTimeout(function () { _switchTab(_ST); }, 30);
+}
+
+
+function _loadFieldAttendance() {
+  var el = document.getElementById('fieldAttContent');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:20px;color:var(--tx3)">Loading…</div>';
+
+  _gas('getFieldAttendance', [], function (rows) {
+    if (!rows || !rows.length) {
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3)">No field attendance records yet.</div>';
+      return;
     }
+    var html = '';
+    rows.forEach(function (r) {
+      html += '<div style="display:flex;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;background:#fff;align-items:flex-start">' +
+        (r.photo_url
+          ? '<img src="' + r.photo_url + '" style="width:100px;height:100px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.style.display=\'none\'">'
+          : '<div style="width:100px;height:100px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">No Photo</div>') +
+        '<div style="flex:1">' +
+        '<div style="font-weight:700">' + _esc(r.emp_name) + '</div>' +
+        '<div style="font-size:12px;color:var(--tx3)">' + _esc(r.dept) + '</div>' +
+        '<div style="font-size:13px;margin-top:4px">' + _esc(r.date) + ' · <b>' + _esc(r.check_in) + '</b></div>' +
+        (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</div>' : '') +
+        (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
+        '</div></div>';
+    });
+    el.innerHTML = html;
+  }, function (err) {
+    el.innerHTML = '<div style="padding:20px;color:var(--R)">Failed to load: ' + _esc(err.message || 'Error') + '</div>';
+  });
+}
+
 
 
     // Regularize form (employee self-regularization request)
