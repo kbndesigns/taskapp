@@ -2519,24 +2519,27 @@ function _doCheckInCall(btn, payload) {
     }
 
 
-    function _doPunch() {
-      var btn = document.getElementById('dashPunchBtn');
-      if (!btn) return;
-      if (btn.innerHTML.indexOf('Processing') !== -1) return;
+function _doPunch() {
+  var btn = document.getElementById('dashPunchBtn');
+  if (!btn) return;
+  if (btn.innerHTML.indexOf('Processing') !== -1) return;
 
-      var deviceTs = new Date().toISOString();
+  var deviceTs = new Date().toISOString();
 
-      if (_punchState === 'not_checked_in') {
-        _withGpsLocation(btn, 'Check IN', 'fa-sign-in-alt', deviceTs, function (payload) {
-          _doCheckInCall(btn, payload);
-        });
+  if (_punchState === 'not_checked_in') {
+    // Check In — photo + location (NeedLocation=No)
+    _withGpsLocation(btn, 'Check IN', 'fa-sign-in-alt', deviceTs, function (payload) {
+      _doCheckInCall(btn, payload);
+    });
 
-      } else if (_punchState === 'checked_in') {
-        _withGpsLocation(btn, 'Check OUT', 'fa-sign-out-alt', deviceTs, function (payload) {
-          _doCheckOutCall(btn, payload);
-        });
-      }
-    }
+  } else if (_punchState === 'checked_in') {
+    // Check Out — sirf confirm, no photo
+    if (!confirm('Are you sure you want to Check OUT?')) return;
+    _withGpsLocation(btn, 'Check OUT', 'fa-sign-out-alt', deviceTs, function (payload) {
+      _doCheckOutCall(btn, typeof payload === 'object' ? payload.ts : payload);
+    });
+  }
+}
 
     // Shared GPS-fetch wrapper for both check-in and check-out — only calls
     // onReady() once we actually have a location (or GPS isn't required by
@@ -5181,35 +5184,6 @@ function _vAttend() {
 }
 
 
-function _loadFieldAttendance() {
-  var el = document.getElementById('fieldAttContent');
-  if (!el) return;
-  el.innerHTML = '<div style="padding:20px;color:var(--tx3)">Loading…</div>';
-
-  _gas('getFieldAttendance', [], function (rows) {
-    if (!rows || !rows.length) {
-      el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3)">No field attendance records yet.</div>';
-      return;
-    }
-    var html = '';
-    rows.forEach(function (r) {
-      html += '<div style="display:flex;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;background:#fff;align-items:flex-start">' +
-        (r.photo_url
-          ? '<img src="' + r.photo_url + '" style="width:100px;height:100px;object-fit:cover;border-radius:8px;flex-shrink:0">'
-          : '<div style="width:100px;height:100px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">No Photo</div>') +
-        '<div style="flex:1">' +
-        '<div style="font-weight:700">' + _esc(r.emp_name) + '</div>' +
-        '<div style="font-size:12px;color:var(--tx3)">' + _esc(r.dept) + '</div>' +
-        '<div style="font-size:13px;margin-top:4px">' + _esc(r.date) + ' · <b>' + _esc(r.check_in) + '</b></div>' +
-        (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</div>' : '') +
-        (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
-        '</div></div>';
-    });
-    el.innerHTML = html;
-  }, function (err) {
-    el.innerHTML = '<div style="padding:20px;color:var(--R)">Error: ' + _esc(err.message || 'Failed') + '</div>';
-  });
-}
 
 
     // Regularize form (employee self-regularization request)
@@ -15942,3 +15916,71 @@ function _showFieldAttendance() {
 
 
 
+function _loadFieldAttendance() {
+  var el = document.getElementById('fieldAttContent');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:20px;color:var(--tx3)">Loading…</div>';
+
+  _gas('getFieldAttendance', [], function (rows) {
+    window._fieldAttRows = rows || [];
+    _renderFieldAttendance();
+  }, function (err) {
+    el.innerHTML = '<div style="padding:20px;color:var(--R)">Error: ' + _esc(err.message || 'Failed') + '</div>';
+  });
+}
+
+function _renderFieldAttendance() {
+  var el = document.getElementById('fieldAttContent');
+  if (!el) return;
+  var rows = window._fieldAttRows || [];
+
+  var emp = (document.getElementById('faEmp') || {}).value || '';
+  var dept = (document.getElementById('faDept') || {}).value || '';
+  var from = (document.getElementById('faFrom') || {}).value || '';
+  var to = (document.getElementById('faTo') || {}).value || '';
+
+  var filtered = rows.filter(function (r) {
+    if (emp && r.emp_name.toLowerCase().indexOf(emp.toLowerCase()) === -1) return false;
+    if (dept && r.dept.toLowerCase().indexOf(dept.toLowerCase()) === -1) return false;
+    if (from && r.date < from) return false;
+    if (to && r.date > to) return false;
+    return true;
+  });
+
+  var emps = [], depts = [];
+  rows.forEach(function (r) {
+    if (emps.indexOf(r.emp_name) === -1) emps.push(r.emp_name);
+    if (depts.indexOf(r.dept) === -1) depts.push(r.dept);
+  });
+
+  var html = '<div style="padding:12px">' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
+    '<input id="faEmp" placeholder="Employee" value="' + _esc(emp) + '" oninput="_renderFieldAttendance()" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:13px">' +
+    '<select id="faDept" onchange="_renderFieldAttendance()" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:13px"><option value="">All Depts</option>' +
+    depts.map(function (d) { return '<option' + (d === dept ? ' selected' : '') + '>' + _esc(d) + '</option>'; }).join('') +
+    '</select>' +
+    '<input id="faFrom" type="date" value="' + from + '" onchange="_renderFieldAttendance()" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:13px">' +
+    '<input id="faTo" type="date" value="' + to + '" onchange="_renderFieldAttendance()" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:13px">' +
+    '<button onclick="document.getElementById(\'faEmp\').value=\'\';document.getElementById(\'faDept\').value=\'\';document.getElementById(\'faFrom\').value=\'\';document.getElementById(\'faTo\').value=\'\';_renderFieldAttendance()" class="btn btn-sm btn-ghost">Clear</button>' +
+    '</div>';
+
+  if (!filtered.length) {
+    html += '<div style="padding:20px;text-align:center;color:var(--tx3)">No records match filters.</div>';
+  } else {
+    filtered.forEach(function (r) {
+      html += '<div style="display:flex;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;background:#fff;align-items:flex-start">' +
+        (r.photo_url
+          ? '<img src="' + r.photo_url + '" style="width:100px;height:100px;object-fit:cover;border-radius:8px;flex-shrink:0">'
+          : '<div style="width:100px;height:100px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">No Photo</div>') +
+        '<div style="flex:1">' +
+        '<div style="font-weight:700">' + _esc(r.emp_name) + '</div>' +
+        '<div style="font-size:12px;color:var(--tx3)">' + _esc(r.dept) + '</div>' +
+        '<div style="font-size:13px;margin-top:4px">' + _esc(r.date) + ' · <b>' + _esc(r.check_in) + '</b></div>' +
+        (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</div>' : '') +
+        (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
+        '</div></div>';
+    });
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
