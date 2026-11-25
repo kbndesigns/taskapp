@@ -15763,82 +15763,106 @@ function _loadEmpDetail(empId) {
 /* Warm-up: wake Vercel function + Apps Script while the user is on the login screen */
 (function () {try {fetch('/api/rpc', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({fn: 'serverUptime', args: []})}).catch(function () { });} catch (e) { }})();
 
-
 function _captureFieldAttendance(btn, label, icon, deviceTs, onReady) {
-  btn.innerHTML = '<i class="fas fa-camera fa-spin"></i> Capture Photo + Location';
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-camera fa-spin"></i> Getting location…';
 
   navigator.geolocation.getCurrentPosition(function (pos) {
     var lat = pos.coords.latitude;
     var lng = pos.coords.longitude;
-    var ts = new Date().toLocaleString('en-IN', { hour12: true });
+    var tsText = new Date().toLocaleString('en-IN', { hour12: true, timeZone: 'Asia/Kolkata' });
 
+    btn.innerHTML = '<i class="fas fa-camera"></i> Open Camera';
+
+    // Hidden file input — prevent page reload issues
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.capture = 'environment';
-    input.onchange = function (e) {
-      var file = e.target.files[0];
+    input.style.position = 'absolute';
+    input.style.left = '-9999px';
+    document.body.appendChild(input);
+
+    input.onchange = function () {
+      var file = input.files && input.files[0];
+      document.body.removeChild(input);
       if (!file) {
-        _toast('Photo required', 'err');
+        _toast('Photo cancelled', 'warn');
         btn.disabled = false;
         btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
         return;
       }
+
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
+
       var reader = new FileReader();
       reader.onload = function (ev) {
         var img = new Image();
         img.onload = function () {
           var canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
+          var maxW = 1280;
+          var scale = Math.min(1, maxW / img.width);
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
           var ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          ctx.fillStyle = 'rgba(0,0,0,0.65)';
-          ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+          // Overlay bar
+          var barH = Math.max(70, Math.round(canvas.height * 0.12));
+          ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          ctx.fillRect(0, canvas.height - barH, canvas.width, barH);
           ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 26px Arial';
-          ctx.fillText('Lat: ' + lat.toFixed(5) + '  Lng: ' + lng.toFixed(5), 16, canvas.height - 55);
-          ctx.font = '20px Arial';
-          ctx.fillText(ts, 16, canvas.height - 20);
+          ctx.font = 'bold ' + Math.round(barH * 0.28) + 'px Arial';
+          ctx.fillText('Lat: ' + lat.toFixed(5) + '  Lng: ' + lng.toFixed(5), 12, canvas.height - barH + 28);
+          ctx.font = Math.round(barH * 0.22) + 'px Arial';
+          ctx.fillText(tsText, 12, canvas.height - 12);
 
-          var base64 = canvas.toDataURL('image/jpeg', 0.75);
+          var base64 = canvas.toDataURL('image/jpeg', 0.72);
           onReady({ ts: deviceTs, lat: lat, lng: lng, photo_base64: base64 });
+        };
+        img.onerror = function () {
+          _toast('Image load failed', 'err');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
         };
         img.src = ev.target.result;
       };
       reader.readAsDataURL(file);
     };
+
+    // Trigger camera
     input.click();
-  }, function () {
-    _toast('Location required for field attendance', 'err');
+  }, function (err) {
+    _toast('Location required: ' + (err.message || 'permission denied'), 'err');
     btn.disabled = false;
     btn.innerHTML = '<i class="fas ' + icon + '"></i> ' + label;
-  }, { enableHighAccuracy: true, timeout: 12000 });
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 }
+
 
 function _showFieldAttendance() {
   _gas('getFieldAttendance', [], function (rows) {
-    var html = '<div style="padding:12px"><h3 style="margin:0 0 12px">Field Attendance</h3>';
+    var html = '<div style="padding:14px"><h3 style="margin:0 0 14px;font-size:16px">Field Attendance</h3>';
     if (!rows || !rows.length) {
-      html += '<div style="color:var(--tx3)">No field attendance records yet.</div>';
+      html += '<div style="color:var(--tx3);padding:20px;text-align:center">No field attendance records yet.</div>';
     } else {
       rows.forEach(function (r) {
-        html += '<div style="display:flex;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;background:#fff">' +
-          (r.photo_url ? '<img src="' + r.photo_url + '" style="width:120px;height:120px;object-fit:cover;border-radius:8px">' : '<div style="width:120px;height:120px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af">No Photo</div>') +
-          '<div style="flex:1">' +
-          '<div style="font-weight:700">' + _esc(r.emp_name) + ' <span style="font-weight:400;color:var(--tx3)">(' + _esc(r.dept) + ')</span></div>' +
-          '<div style="font-size:13px;margin-top:4px">' + _esc(r.date) + ' · Check-in: <b>' + _esc(r.check_in) + '</b></div>' +
-          (r.captured_lat ? '<div style="font-size:12.5px;color:var(--tx2);margin-top:4px">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</div>' : '') +
+        html += '<div style="display:flex;gap:14px;padding:12px;border:1px solid var(--bd);border-radius:12px;margin-bottom:10px;background:#fff;align-items:flex-start">' +
+          (r.photo_url
+            ? '<img src="' + r.photo_url + '" style="width:110px;height:110px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.style.display=\'none\'">'
+            : '<div style="width:110px;height:110px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">No Photo</div>') +
+          '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:700;font-size:14px">' + _esc(r.emp_name) + '</div>' +
+          '<div style="font-size:12px;color:var(--tx3);margin-top:2px">' + _esc(r.dept) + '</div>' +
+          '<div style="font-size:13px;margin-top:6px">' + _esc(r.date) + ' · <b>' + _esc(r.check_in) + '</b></div>' +
+          (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</div>' : '') +
           (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
           '</div></div>';
       });
     }
     html += '</div>';
-    var container = document.getElementById('attendContent') || document.querySelector('.attend-body') || document.getElementById('mainContent');
-    if (container) container.innerHTML = html;
-  }, function (err) {
-    _toast(err.message || 'Failed to load field attendance', 'err');
+    var c = document.getElementById('attendContent') || document.querySelector('.main-content, #mainContent, .attend-body');
+    if (c) c.innerHTML = html;
   });
 }
 
