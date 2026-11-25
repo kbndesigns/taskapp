@@ -50,7 +50,7 @@ const SNAPSHOT_READS = new Set([
   // Attendance & Leave
   'getMyAttendance', 'getTeamAttendanceStatus',
   'getLeaveBalance', 'getLeaveSummary', 'getLeaveRequests',
-  'getRegularizationRequests', 'getFieldAttendance',
+  'getRegularizationRequests',
   // Shared
   'getAnnouncements', 'getAllAppConfigForFrontend', 'getHolidayList', 'getDoerList'
 ]);
