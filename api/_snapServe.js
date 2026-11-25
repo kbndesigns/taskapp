@@ -485,6 +485,20 @@ function fromSnapshot(fn, args, email, snap) {
       return buildTaskHistory(snap, doer, args[0], args[1], args[2]);
     }
     case 'getDeptTasks': return buildDeptTasks(snap, doer, args[0]);
+    case 'getFieldAttendance': {
+  const rows = (snap.attendance || []).filter(a => a.photo_url && String(a.photo_url).trim());
+  return rows.map(a => ({
+    att_id: String(a.att_id || ''),
+    emp_id: String(a.emp_id || ''),
+    emp_name: String(a.emp_name || ''),
+    dept: String(a.dept || a.department || ''),
+    date: normDate(a.date),
+    check_in: String(a.check_in || ''),
+    photo_url: String(a.photo_url || ''),
+    captured_lat: String(a.captured_lat || ''),
+    captured_lng: String(a.captured_lng || '')
+  })).reverse();
+}
     case 'getTaskSetup': return buildTaskSetup(snap, doer, args[0]);
     case 'getTodayCelebrations': return buildCelebrations(snap);
     case 'getRecentActivity': return buildRecentActivity(snap, doer);
