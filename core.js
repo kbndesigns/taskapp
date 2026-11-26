@@ -4893,35 +4893,41 @@ g.items.map(function (d, idx) {
     '</div>' +
 
     // ── Body (hidden by default) ──
-    '<div class="dc-body" style="display:none;padding:12px 14px;border-top:1px solid var(--bdr);background:var(--sur2)">' +
-      '<div style="display:flex;flex-wrap:wrap;gap:12px 18px;font-size:12px;color:var(--tx2);margin-bottom:12px">' +
-        (isOut
-          ? '<span><i class="fas fa-user-check" style="color:var(--tx3);margin-right:4px"></i>To: <strong>' + _esc(d.delegated_to_name || d.delegated_to) + '</strong></span>'
-          : '<span><i class="fas fa-user" style="color:var(--tx3);margin-right:4px"></i>By: <strong>' + _esc(d.delegated_by_name || d.delegated_by) + '</strong></span>') +
-        '<span><i class="fas fa-calendar-plus" style="color:var(--tx3);margin-right:4px"></i>Assigned: <strong>' +
-          (d.assigned_at ? _fmtDateTime(d.assigned_at) : _fmtDate(d.first_date)) + '</strong></span>' +
-        '<span><i class="fas fa-flag-checkered" style="color:var(--tx3);margin-right:4px"></i>Due: <strong>' +
-          _fmtDate(d.final_date) + '</strong></span>' +
-        (d.status === 'Completed' && d.completed_at
-          ? '<span style="color:var(--G)"><i class="fas fa-check-circle" style="margin-right:4px"></i>Completed: <strong>' + _fmtDateTime(d.completed_at) + '</strong></span>'
-          : '') +
-        dlTxt +
-      '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">' +
-        (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
-          ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
-            '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>'
-          : '') +
-        (isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
-          ? '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>'
-          : '') +
-        (_isMarkAttendanceAllowed() && isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
-          ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dMgrComplete(this)"><i class="fas fa-check-double"></i> Mark Done</button>' +
-            '<button class="btn btn-sm" style="background:var(--Ol);color:var(--O);border:none" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dMgrShift(this)"><i class="fas fa-forward"></i> Shift</button>'
-          : '') +
-      '</div>' +
+'<div class="dc-body" style="display:none;padding:10px 14px;border-top:1px solid var(--bdr);background:var(--sur2)">' +
+  '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">' +
+
+    // ── Left: details ──
+    '<div style="display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12px;color:var(--tx2);align-items:center">' +
+      (isOut
+        ? '<span><i class="fas fa-user-check" style="color:var(--tx3);margin-right:4px"></i>To: <strong>' + _esc(d.delegated_to_name || d.delegated_to) + '</strong></span>'
+        : '<span><i class="fas fa-user" style="color:var(--tx3);margin-right:4px"></i>By: <strong>' + _esc(d.delegated_by_name || d.delegated_by) + '</strong></span>') +
+      '<span><i class="fas fa-calendar-plus" style="color:var(--tx3);margin-right:4px"></i>Assigned: <strong>' +
+        (d.assigned_at ? _fmtDateTime(d.assigned_at) : _fmtDate(d.first_date)) + '</strong></span>' +
+      '<span><i class="fas fa-flag-checkered" style="color:var(--tx3);margin-right:4px"></i>Due: <strong>' +
+        _fmtDate(d.final_date) + '</strong></span>' +
+      (d.status === 'Completed' && d.completed_at
+        ? '<span style="color:var(--G)"><i class="fas fa-check-circle" style="margin-right:4px"></i>Completed: <strong>' + _fmtDateTime(d.completed_at) + '</strong></span>'
+        : '') +
+      dlTxt +
     '</div>' +
-  '</div>';
+
+    // ── Right: buttons ──
+    '<div style="display:flex;gap:6px;flex-shrink:0;align-items:center">' +
+      (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+        ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
+          '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>'
+        : '') +
+      (isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+        ? '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>'
+        : '') +
+      (_isMarkAttendanceAllowed() && isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+        ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dMgrComplete(this)"><i class="fas fa-check-double"></i> Mark Done</button>' +
+          '<button class="btn btn-sm" style="background:var(--Ol);color:var(--O);border:none" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dMgrShift(this)"><i class="fas fa-forward"></i> Shift</button>'
+        : '') +
+    '</div>' +
+
+  '</div>' +
+'</div>' +
 }).join('') +
             '</div></div>';
         }).join('');
