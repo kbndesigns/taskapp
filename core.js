@@ -4859,16 +4859,16 @@ if (_U && _U.need_location === false) {
         groups.filter(function (g) {return g.items.length > 0;}).map(function (g) {
           var gid = 'dlg_grp_' + g.key;
           var defaultCollapsed = (g.key === 'completed' || g.key === 'cancelled');
-          return '<div style="margin-bottom:14px">' +
-'<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sur2);border-radius:10px;margin-bottom:8px;cursor:pointer;user-select:none;border:1px solid var(--bdr)" ' +
-'onclick="_delegGrpToggle(' + JSON.stringify(gid) + ')">' +
-  '<i class="fas ' + g.icon + '" style="color:' + g.color + ';font-size:13px"></i>' +
-  '<span style="font-size:12.5px;font-weight:800;color:' + g.color + '">' + g.label + '</span>' +
-  '<span style="font-size:11px;color:var(--tx3);margin-left:2px">(' + g.items.length + ')</span>' +
-  '<i class="fas fa-chevron-down dgc" id="dgc_' + gid + '" style="margin-left:auto;font-size:11px;color:var(--tx3);transition:transform .2s;' +
-  (defaultCollapsed ? '' : 'transform:rotate(180deg)') + '"></i>' +
-'</div>' +
-            '<div id="' + gid + '" style="display:' + (defaultCollapsed ? 'none' : '') + '">' +
+return '<div style="margin-bottom:14px">' +
+  '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sur2);border-radius:10px;margin-bottom:8px;cursor:pointer;user-select:none;border:1px solid var(--bdr)" ' +
+  'onclick="_delegGrpToggle(\'' + gid + '\')">' +
+    '<i class="fas ' + g.icon + '" style="color:' + g.color + ';font-size:13px"></i>' +
+    '<span style="font-size:12.5px;font-weight:800;color:' + g.color + '">' + g.label + '</span>' +
+    '<span style="font-size:11px;color:var(--tx3);margin-left:2px">(' + g.items.length + ')</span>' +
+    '<i class="fas fa-chevron-down dgc" id="dgc_' + gid + '" style="margin-left:auto;font-size:11px;color:var(--tx3);transition:transform .2s;' +
+    (defaultCollapsed ? '' : 'transform:rotate(180deg)') + '"></i>' +
+  '</div>' +
+  '<div id="' + gid + '" style="display:' + (defaultCollapsed ? 'none' : '') + '">' +
 g.items.map(function (d, idx) {
   var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
   var cardId = 'dcard_' + g.key + '_' + idx;
