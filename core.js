@@ -3470,6 +3470,18 @@ if (_U && _U.need_location === false) {
       b.style.display = open ? 'block' : 'none';
       if (ic) ic.className = 'fas fa-chevron-' + (open ? 'down' : 'right') + ' fa-fw';
     }
+
+    function _ckToggle(rowId) {
+  var card = document.getElementById(rowId);
+  if (!card) return;
+  var body = card.querySelector('.ck-body');
+  var chev = card.querySelector('.ck-chev');
+  if (!body) return;
+  var isHidden = body.style.display === 'none' || getComputedStyle(body).display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  if (chev) chev.style.transform = isHidden ? 'rotate(180deg)' : '';
+}
+
     function _cmtExpandAll(exp) {
       document.querySelectorAll('#cmtList .adm-body').forEach(function (b) {
         if (exp) { b.classList.add('adm-open'); b.style.display = 'block'; }
@@ -4853,8 +4865,8 @@ if (_U && _U.need_location === false) {
             '<i class="fas ' + g.icon + '" style="color:' + g.color + ';font-size:12px"></i>' +
             '<span style="font-size:12px;font-weight:800;color:' + g.color + '">' + g.label + '</span>' +
             '<span style="font-size:11px;color:var(--tx3);margin-left:4px">(' + g.items.length + ')</span>' +
-            '<i class="fas fa-chevron-down dgc" id="dgc_' + gid + '" style="margin-left:auto;font-size:10px;color:var(--tx3);transition:transform .2s;' +
-            (defaultCollapsed ? '' : 'transform:rotate(180deg)') + '"></i>' +
+'<i class="fas fa-chevron-down dgc" id="dgc_' + gid + '" style="margin-left:auto;font-size:12px;color:var(--tx2);transition:transform .2s;cursor:pointer;' +
+(defaultCollapsed ? '' : 'transform:rotate(180deg)') + '"></i>' +
             '</div>' +
             '<div id="' + gid + '" style="display:' + (defaultCollapsed ? 'none' : '') + '">' +
             g.items.map(function (d, idx) {
@@ -4865,9 +4877,16 @@ if (_U && _U.need_location === false) {
                 dl < 0 ? '<span style="color:var(--R);font-weight:800"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
                   dl === 0 ? '<span style="color:var(--O);font-weight:800"><i class="fas fa-clock"></i> Due Today</span>' :
                     '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
-              return '<div class="dcard ' + g.key + '" id="' + cardId + '" style="margin-bottom:6px">' +
-                '<div class="dc-top" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" ' +
-                'onclick="_delegToggle(\'' + cardId + '\')">' +
+return '<div class="dcard ' + g.key + '" id="' + cardId + '" style="margin-bottom:6px;border:1px solid var(--bdr);border-radius:10px;overflow:hidden">' +
+  '<div class="dc-top" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--sur)" ' +
+  'onclick="_delegToggle(\'' + cardId + '\')">' +
+    '<div class="dc-desc" style="flex:1;padding-right:10px;font-weight:600">' + _esc(d.task_desc) + '</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
+      _statusBadge(effStatus) +
+      '<i class="fas fa-chevron-down dc-chev" style="font-size:13px;color:var(--tx2);transition:transform .2s;margin-left:4px"></i>' +
+    '</div>' +
+  '</div>' +
+  '<div class="dc-body" style="display:none;padding:10px 12px;border-top:1px solid var(--bdr);background:var(--sur2)">' +
                 '<div class="dc-desc" style="flex:1;padding-right:10px">' + _esc(d.task_desc) + '</div>' +
                 '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
                 _statusBadge(effStatus) +
@@ -4923,16 +4942,18 @@ if (_U && _U.need_location === false) {
       if (ic) ic.style.transform = isHidden ? 'rotate(180deg)' : '';
     }
 
-    function _delegToggle(cardId) {
-      var card = document.getElementById(cardId);
-      if (!card) return;
-      var body = card.querySelector('.dc-body');
-      var chev = card.querySelector('.dc-chev');
-      if (!body) return;
-      var isHidden = body.style.display === 'none' || getComputedStyle(body).display === 'none';
-      body.style.display = isHidden ? 'block' : 'none';
-      if (chev) chev.style.transform = isHidden ? 'rotate(180deg)' : '';
-    }
+function _delegToggle(cardId) {
+  var card = document.getElementById(cardId);
+  if (!card) return;
+  var body = card.querySelector('.dc-body');
+  var chev = card.querySelector('.dc-chev');
+  if (!body) return;
+  var isHidden = body.style.display === 'none' || getComputedStyle(body).display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  if (chev) chev.style.transform = isHidden ? 'rotate(180deg)' : '';
+  // Optional: persist open state
+  try { localStorage.setItem('deleg_open_' + cardId, isHidden ? '1' : '0'); } catch (e) {}
+}
 
     function _delegExpandAll(expand) {
       document.querySelectorAll('[id^="dlg_grp_"]').forEach(function (g) {
@@ -12058,79 +12079,95 @@ function _vAttend() {
     }
 
 
-    function _renderCkList() {
-      var el = document.getElementById('ckList');
-      if (!el) return;
-      var date = document.getElementById('ckDate') ? document.getElementById('ckDate').value : _today();
-      var tasks = _ckSortedTasks(_D.todayTasks || []);
+function _renderCkList() {
+  var el = document.getElementById('ckList');
+  if (!el) return;
+  var date = document.getElementById('ckDate') ? document.getElementById('ckDate').value : _today();
+  var tasks = _ckSortedTasks(_D.todayTasks || []);
 
-      if (!tasks.length) {
-        el.innerHTML = _ckSortBarHtml() +
-          '<div class="empty-state"><i class="fas fa-list-check"></i><h4>No Tasks</h4>' +
-          '<p>No tasks are scheduled for ' + _fmtDate(date) + '.</p></div>';
-        return;
-      }
+  if (!tasks.length) {
+    el.innerHTML = _ckSortBarHtml() +
+      '<div class="empty-state"><i class="fas fa-list-check"></i><h4>No Tasks</h4>' +
+      '<p>No tasks are scheduled for ' + _fmtDate(date) + '.</p></div>';
+    return;
+  }
 
-      el.innerHTML = _ckSortBarHtml() + tasks.map(function (t) {
-        var isDone = t.status === 'Done';
-        var isTransOut = !!(t.is_transferred);
-        var isReceived = !!(t.is_received);
-        var canDo = !isDone && !isTransOut;
-        var isTodayView = (date === _today());
-        var canEditRemark = isDone && !isTransOut && isTodayView;
+  el.innerHTML = _ckSortBarHtml() + tasks.map(function (t) {
+    var isDone = t.status === 'Done';
+    var isTransOut = !!(t.is_transferred);
+    var isReceived = !!(t.is_received);
+    var canDo = !isDone && !isTransOut;
+    var isTodayView = (date === _today());
+    var canEditRemark = isDone && !isTransOut && isTodayView;
 
-        var actualFmt = t.actual ? _tsShort(t.actual) : '';
-        var planFmt = '';
-        if (t.scheduled_time && t.planned) {
-          planFmt = _fmtDate(t.planned) + ' ' + t.scheduled_time;
-        } else if (t.scheduled_time) {
-          planFmt = t.scheduled_time;
-        }
+    var actualFmt = t.actual ? _tsShort(t.actual) : '';
+    var planFmt = '';
+    if (t.scheduled_time && t.planned) {
+      planFmt = _fmtDate(t.planned) + ' ' + t.scheduled_time;
+    } else if (t.scheduled_time) {
+      planFmt = t.scheduled_time;
+    }
 
-        var rowId = 'ckrow_' + t.row_num + '_' + Math.random().toString(36).slice(2, 7);
-        var sc = _colorForStatus(t.status);
-        var rowBorder = isReceived ? 'border-left:3px solid var(--V)' : '';
+    var rowId = 'ckrow_' + t.row_num + '_' + Math.random().toString(36).slice(2, 7);
+    var sc = _colorForStatus(t.status);
+    var rowBorder = isReceived ? 'border-left:3px solid var(--V)' : '';
 
-        var actionBtn = '';
-        if (canDo) {
-          actionBtn = '<button class="ck-btn btn btn-sm btn-xs" onclick="_markDone(\'' + rowId + '\')"><i class="fas fa-check"></i> Done</button>';
-        } else if (canEditRemark) {
-          var safeRemark = String(t.remark || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-          actionBtn = '<button class="btn btn-outline btn-sm btn-xs" onclick="_editDoneRemark(\'' + rowId + '\',\'' + safeRemark + '\')"><i class="fas fa-pen"></i> Edit remark</button>';
-        }
+    var actionBtn = '';
+    if (canDo) {
+      actionBtn = '<button class="ck-btn btn btn-sm btn-xs" onclick="event.stopPropagation();_markDone(\'' + rowId + '\')"><i class="fas fa-check"></i> Done</button>';
+    } else if (canEditRemark) {
+      var safeRemark = String(t.remark || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      actionBtn = '<button class="btn btn-outline btn-sm btn-xs" onclick="event.stopPropagation();_editDoneRemark(\'' + rowId + '\',\'' + safeRemark + '\')"><i class="fas fa-pen"></i> Edit remark</button>';
+    }
 
-        return '<div class="anim-item" id="' + rowId + '" data-row="' + t.row_num + '" data-occ="' + t.occ +
-          '" data-uid="' + _esc(t.task_uid || '') + '" data-planned="' + _esc(t.planned || '') +
-          '" data-name="' + _esc(t.task_name || '') + '" data-dt="' + _esc(date) +
-          '" style="display:flex;align-items:flex-start;gap:12px;padding:13px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;margin-bottom:8px;' + rowBorder + '">' +
-          '<div class="ck-circle" style="width:24px;height:24px;border-radius:50%;border:2px solid ' + sc +
+    return '<div class="ck-card anim-item" id="' + rowId + '" data-row="' + t.row_num + '" data-occ="' + t.occ +
+      '" data-uid="' + _esc(t.task_uid || '') + '" data-planned="' + _esc(t.planned || '') +
+      '" data-name="' + _esc(t.task_name || '') + '" data-dt="' + _esc(date) +
+      '" style="margin-bottom:8px;border:1px solid var(--bdr);border-radius:12px;overflow:hidden;' + rowBorder + '">' +
+
+      // ── Clickable header ──
+      '<div class="ck-top" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--sur);user-select:none" ' +
+      'onclick="_ckToggle(\'' + rowId + '\')">' +
+        '<div class="ck-circle" style="width:24px;height:24px;border-radius:50%;border:2px solid ' + sc +
           ';background:' + (isDone ? sc : 'transparent') +
           ';flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:' +
-          (canDo ? 'pointer' : 'default') + ';margin-top:1px" ' +
-          (canDo ? 'onclick="_markDone(\'' + rowId + '\')"' : '') + '>' +
+          (canDo ? 'pointer' : 'default') + '" ' +
+          (canDo ? 'onclick="event.stopPropagation();_markDone(\'' + rowId + '\')"' : '') + '>' +
           (isDone ? '<i class="fas fa-check" style="font-size:10px;color:#fff"></i>' : '') +
-          '</div>' +
-          '<div style="flex:1;min-width:0">' +
+        '</div>' +
+        '<div style="flex:1;min-width:0">' +
           '<div style="font-size:13.5px;font-weight:700;' +
-          (isDone || isTransOut ? 'text-decoration:line-through;color:var(--tx3)' : '') +
-          ';word-break:break-word">' + _esc(t.task_name) + '</div>' +
-          '<div style="font-size:11px;color:var(--tx3);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
-          _freqBadge(t.frequency) +
-          (isTransOut ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Ol);color:var(--O);font-weight:700;font-size:10.5px"><i class="fas fa-share"></i> Transferred away</span>' : '') +
-          (isReceived ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Vl);color:var(--V);font-weight:700;font-size:10.5px"><i class="fas fa-arrow-right-arrow-left"></i> Transferred to you</span>' +
-            (t.transfer_by ? '<span style="color:var(--tx3);font-size:10.5px"> by ' + _esc(t.transfer_by) + '</span>' : '') : '') +
+            (isDone || isTransOut ? 'text-decoration:line-through;color:var(--tx3)' : '') +
+            ';word-break:break-word">' + _esc(t.task_name) + '</div>' +
+          '<div style="font-size:11px;color:var(--tx3);margin-top:3px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
+            _freqBadge(t.frequency) +
+            (isTransOut ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Ol);color:var(--O);font-weight:700;font-size:10.5px"><i class="fas fa-share"></i> Transferred away</span>' : '') +
+            (isReceived ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Vl);color:var(--V);font-weight:700;font-size:10.5px"><i class="fas fa-arrow-right-arrow-left"></i> Transferred to you</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
+          _statusBadge(t.status) +
+          '<i class="fas fa-chevron-down ck-chev" style="font-size:13px;color:var(--tx2);transition:transform .2s"></i>' +
+        '</div>' +
+      '</div>' +
+
+      // ── Collapsible body ──
+      '<div class="ck-body" style="display:none;padding:12px 14px;border-top:1px solid var(--bdr);background:var(--sur2)">' +
+        '<div style="font-size:11px;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px">' +
           (t.remark ? '<span style="padding:2px 8px;border-radius:8px;background:var(--Il);color:var(--I);font-size:10.5px;font-weight:600"><i class="fas fa-comment-dots"></i> ' + _esc(t.remark) + '</span>' : '') +
-          '<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center">' +
           (planFmt ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:8px;background:var(--Pl);color:var(--P);font-size:10.5px;font-weight:800"><i class="fas fa-calendar-clock" style="font-size:10px"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
           (actualFmt
             ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:8px;background:var(--Gl);color:var(--G);font-size:10.5px;font-weight:800"><i class="fas fa-check-circle" style="font-size:10px"></i> Actual: <strong>' + actualFmt + '</strong></span>'
-            : (planFmt && !isDone ? '<span style="padding:2px 9px;border-radius:8px;background:var(--sur2);color:var(--tx3);font-size:10.5px;border:1px solid var(--bdr)">Actual: pending</span>' : '')) +
-          '</div></div></div>' +
-          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +
-          _statusBadge(t.status) + actionBtn +
-          '</div></div>';
-      }).join('');
-    }
+            : (planFmt && !isDone ? '<span style="padding:2px 9px;border-radius:8px;background:var(--sur);color:var(--tx3);font-size:10.5px;border:1px solid var(--bdr)">Actual: pending</span>' : '')) +
+          (isReceived && t.transfer_by ? '<span style="color:var(--tx3);font-size:10.5px">Transferred by ' + _esc(t.transfer_by) + '</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;justify-content:flex-end;gap:8px">' +
+          actionBtn +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
 
 
     function _editDoneRemark(rowId, currentRemark) {
