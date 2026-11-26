@@ -15798,4 +15798,9 @@ input, textarea, select { -webkit-user-select: text; user-select: text; }
   }
 }
 
-
+.dcard .dc-top:hover {
+  background: var(--sur2);
+}
+.dcard .dc-chev {
+  transition: transform .2s ease;
+}
