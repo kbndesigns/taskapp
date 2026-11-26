@@ -15799,10 +15799,3 @@ input, textarea, select { -webkit-user-select: text; user-select: text; }
 }
 
 
-.dcard .dc-top:hover,
-.ck-card .ck-top:hover {
-  background: var(--sur2) !important;
-}
-.dc-chev, .ck-chev {
-  transition: transform .2s ease;
-}
