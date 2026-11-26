@@ -4809,140 +4809,116 @@ if (_U && _U.need_location === false) {
       if (pane) _renderDelegCardsEl(dels, pane, isOut);
     }
 
-    function _renderDelegCardsEl(dels, el, isOut) {
-      // Remember last args so sort buttons can re-render
-      _delLastArgs = {dels: dels, el: el, isOut: isOut};
+function _renderDelegCardsEl(dels, el, isOut) {
+  _delLastArgs = {dels: dels, el: el, isOut: isOut};
 
-      if (!dels || !dels.length) {
-        el.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><h4>No Delegation Tasks</h4><p>Nothing to display here right now.</p></div>';
-        return;
-      }
+  if (!dels || !dels.length) {
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><h4>No Delegation Tasks</h4><p>Nothing to display here right now.</p></div>';
+    return;
+  }
 
-      // Group: Overdue → Pending → Shifted → Cancelled → Completed
-      var groups = [
-        {key: 'overdue', label: 'Overdue', icon: 'fa-triangle-exclamation', color: 'var(--R)', items: []},
-        {key: 'pending', label: 'Pending', icon: 'fa-hourglass-half', color: 'var(--O)', items: []},
-        {key: 'shifted', label: 'Shifted', icon: 'fa-calendar-days', color: 'var(--V)', items: []},
-        {key: 'cancelled', label: 'Cancelled', icon: 'fa-ban', color: 'var(--tx3)', items: []},
-        {key: 'completed', label: 'Completed', icon: 'fa-check-circle', color: 'var(--G)', items: []}
-      ];
-      dels.forEach(function (d) {
-        if (d.status === 'Completed') groups[4].items.push(d);
-        else if (d.status === 'Cancelled') groups[3].items.push(d);
-        else if (d.status === 'Shifted') groups[2].items.push(d);
-        else if (d.is_overdue && d.status !== 'Completed') groups[0].items.push(d);
-        else groups[1].items.push(d);
-      });
+  var groups = [
+    {key: 'overdue', label: 'Overdue', icon: 'fa-triangle-exclamation', color: 'var(--R)', items: []},
+    {key: 'pending', label: 'Pending', icon: 'fa-hourglass-half', color: 'var(--O)', items: []},
+    {key: 'shifted', label: 'Shifted', icon: 'fa-calendar-days', color: 'var(--V)', items: []},
+    {key: 'cancelled', label: 'Cancelled', icon: 'fa-ban', color: 'var(--tx3)', items: []},
+    {key: 'completed', label: 'Completed', icon: 'fa-check-circle', color: 'var(--G)', items: []}
+  ];
+  dels.forEach(function (d) {
+    if (d.status === 'Completed') groups[4].items.push(d);
+    else if (d.status === 'Cancelled') groups[3].items.push(d);
+    else if (d.status === 'Shifted') groups[2].items.push(d);
+    else if (d.is_overdue && d.status !== 'Completed') groups[0].items.push(d);
+    else groups[1].items.push(d);
+  });
 
-      // Sort items inside each group
-      groups.forEach(function (g) {
-        g.items = _delSortItems(g.items);
-      });
+  groups.forEach(function (g) {
+    g.items = _delSortItems(g.items);
+  });
 
-      var totalDone = groups[4].items.length;
-      var totalOvr = groups[0].items.length;
-      var totalAct = groups[1].items.length + groups[2].items.length;
+  var totalDone = groups[4].items.length;
+  var totalOvr = groups[0].items.length;
+  var totalAct = groups[1].items.length + groups[2].items.length;
 
-      el.innerHTML =
-        _delSortBarHtml() +
-        // Summary chips
-        '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">' +
-        '<div class="chip"><i class="fas fa-list"></i> ' + dels.length + '</div>' +
-        '<div class="chip" style="background:var(--Gl);color:var(--G)"><i class="fas fa-check-circle"></i> ' + totalDone + '</div>' +
-        '<div class="chip" style="background:var(--Ol);color:var(--O)"><i class="fas fa-hourglass"></i> ' + totalAct + '</div>' +
-        (totalOvr > 0 ? '<div class="chip" style="background:var(--Rl);color:var(--R)"><i class="fas fa-triangle-exclamation"></i> ' + totalOvr + '</div>' : '') +
-        '<div style="flex:1"></div>' +
-        '<button class="btn btn-xs btn-outline" onclick="_delegExpandAll(true)"><i class="fas fa-expand-alt"></i> Expand All</button>' +
-        '<button class="btn btn-xs btn-outline" onclick="_delegExpandAll(false)"><i class="fas fa-compress-alt"></i> Collapse All</button>' +
+  el.innerHTML =
+    _delSortBarHtml() +
+    '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">' +
+    '<div class="chip"><i class="fas fa-list"></i> ' + dels.length + '</div>' +
+    '<div class="chip" style="background:var(--Gl);color:var(--G)"><i class="fas fa-check-circle"></i> ' + totalDone + '</div>' +
+    '<div class="chip" style="background:var(--Ol);color:var(--O)"><i class="fas fa-hourglass"></i> ' + totalAct + '</div>' +
+    (totalOvr > 0 ? '<div class="chip" style="background:var(--Rl);color:var(--R)"><i class="fas fa-triangle-exclamation"></i> ' + totalOvr + '</div>' : '') +
+    '<div style="flex:1"></div>' +
+    '<button class="btn btn-xs btn-outline" onclick="_delegExpandAll(true)"><i class="fas fa-expand-alt"></i> Expand All</button>' +
+    '<button class="btn btn-xs btn-outline" onclick="_delegExpandAll(false)"><i class="fas fa-compress-alt"></i> Collapse All</button>' +
+    '</div>' +
+    groups.filter(function (g) {return g.items.length > 0;}).map(function (g) {
+      var gid = 'dlg_grp_' + g.key;
+      var defaultCollapsed = (g.key === 'completed' || g.key === 'cancelled');
+      return '<div style="margin-bottom:14px">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sur2);border-radius:10px;margin-bottom:8px;cursor:pointer;user-select:none;border:1px solid var(--bdr)" ' +
+        'onclick="_delegGrpToggle(\'' + gid + '\')">' +
+          '<i class="fas ' + g.icon + '" style="color:' + g.color + ';font-size:13px"></i>' +
+          '<span style="font-size:12.5px;font-weight:800;color:' + g.color + '">' + g.label + '</span>' +
+          '<span style="font-size:11px;color:var(--tx3);margin-left:2px">(' + g.items.length + ')</span>' +
+          '<i class="fas fa-chevron-down dgc" id="dgc_' + gid + '" style="margin-left:auto;font-size:11px;color:var(--tx3);transition:transform .2s;' +
+          (defaultCollapsed ? '' : 'transform:rotate(180deg)') + '"></i>' +
         '</div>' +
-        // Groups
-        groups.filter(function (g) {return g.items.length > 0;}).map(function (g) {
-          var gid = 'dlg_grp_' + g.key;
-          var defaultCollapsed = (g.key === 'completed' || g.key === 'cancelled');
-return '<div style="margin-bottom:14px">' +
-  '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sur2);border-radius:10px;margin-bottom:8px;cursor:pointer;user-select:none;border:1px solid var(--bdr)" ' +
-  'onclick="_delegGrpToggle(\'' + gid + '\')">' +
-    '<i class="fas ' + g.icon + '" style="color:' + g.color + ';font-size:13px"></i>' +
-    '<span style="font-size:12.5px;font-weight:800;color:' + g.color + '">' + g.label + '</span>' +
-    '<span style="font-size:11px;color:var(--tx3);margin-left:2px">(' + g.items.length + ')</span>' +
-    '<i class="fas fa-chevron-down dgc" id="dgc_' + gid + '" style="margin-left:auto;font-size:11px;color:var(--tx3);transition:transform .2s;' +
-    (defaultCollapsed ? '' : 'transform:rotate(180deg)') + '"></i>' +
-  '</div>' +
-  '<div id="' + gid + '" style="display:' + (defaultCollapsed ? 'none' : '') + '">' +
-g.items.map(function (d, idx) {
-  var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
-  var cardId = 'dcard_' + g.key + '_' + idx;
-  var dl = _dl(d.final_date);
-  var dlTxt = dl === null ? '' :
-    dl < 0 ? '<span style="color:var(--R);font-weight:700"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
-      dl === 0 ? '<span style="color:var(--O);font-weight:700"><i class="fas fa-clock"></i> Due Today</span>' :
-        '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
+        '<div id="' + gid + '" style="display:' + (defaultCollapsed ? 'none' : '') + '">' +
+          g.items.map(function (d, idx) {
+            var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
+            var cardId = 'dcard_' + g.key + '_' + idx;
+            var dl = _dl(d.final_date);
+            var dlTxt = dl === null ? '' :
+              dl < 0 ? '<span style="color:var(--R);font-weight:700"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
+                dl === 0 ? '<span style="color:var(--O);font-weight:700"><i class="fas fa-clock"></i> Due Today</span>' :
+                  '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
 
-return '<div style="margin-bottom:14px">' +
-  '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sur2);border-radius:10px;margin-bottom:8px;cursor:pointer;user-select:none;border:1px solid var(--bdr)" ' +
-  'onclick="_delegGrpToggle(\'' + gid + '\')">' +
-    '<i class="fas ' + g.icon + '" style="color:' + g.color + ';font-size:13px"></i>' +
-    '<span style="font-size:12.5px;font-weight:800;color:' + g.color + '">' + g.label + '</span>' +
-    '<span style="font-size:11px;color:var(--tx3);margin-left:2px">(' + g.items.length + ')</span>' +
-    '<i class="fas fa-chevron-down dgc" id="dgc_' + gid + '" style="margin-left:auto;font-size:11px;color:var(--tx3);transition:transform .2s;' +
-    (defaultCollapsed ? '' : 'transform:rotate(180deg)') + '"></i>' +
-  '</div>' +
-  '<div id="' + gid + '" style="display:' + (defaultCollapsed ? 'none' : '') + '">' +
-    g.items.map(function (d, idx) {
-      var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
-      var cardId = 'dcard_' + g.key + '_' + idx;
-      var dl = _dl(d.final_date);
-      var dlTxt = dl === null ? '' :
-        dl < 0 ? '<span style="color:var(--R);font-weight:700"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
-          dl === 0 ? '<span style="color:var(--O);font-weight:700"><i class="fas fa-clock"></i> Due Today</span>' :
-            '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
-
-      return '<div class="dcard" id="' + cardId + '" style="margin-bottom:8px;border:1px solid var(--bdr);border-radius:12px;overflow:hidden;background:var(--sur)">' +
-        '<div class="dc-top" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px;user-select:none" ' +
-        'onclick="_delegToggle(\'' + cardId + '\')">' +
-          '<div style="flex:1;min-width:0">' +
-            '<div style="font-size:13.5px;font-weight:700;color:var(--tx);word-break:break-word;line-height:1.4">' + _esc(d.task_desc) + '</div>' +
-          '</div>' +
-          '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">' +
-            _statusBadge(effStatus) +
-            '<i class="fas fa-chevron-down dc-chev" style="font-size:12px;color:var(--tx3);transition:transform .2s"></i>' +
-          '</div>' +
-        '</div>' +
-        '<div class="dc-body" style="display:none;padding:10px 14px;border-top:1px solid var(--bdr);background:var(--sur2)">' +
-          '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">' +
-            '<div style="display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12px;color:var(--tx2);align-items:center">' +
-              (isOut
-                ? '<span><i class="fas fa-user-check" style="color:var(--tx3);margin-right:4px"></i>To: <strong>' + _esc(d.delegated_to_name || d.delegated_to) + '</strong></span>'
-                : '<span><i class="fas fa-user" style="color:var(--tx3);margin-right:4px"></i>By: <strong>' + _esc(d.delegated_by_name || d.delegated_by) + '</strong></span>') +
-              '<span><i class="fas fa-calendar-plus" style="color:var(--tx3);margin-right:4px"></i>Assigned: <strong>' +
-                (d.assigned_at ? _fmtDateTime(d.assigned_at) : _fmtDate(d.first_date)) + '</strong></span>' +
-              '<span><i class="fas fa-flag-checkered" style="color:var(--tx3);margin-right:4px"></i>Due: <strong>' +
-                _fmtDate(d.final_date) + '</strong></span>' +
-              (d.status === 'Completed' && d.completed_at
-                ? '<span style="color:var(--G)"><i class="fas fa-check-circle" style="margin-right:4px"></i>Completed: <strong>' + _fmtDateTime(d.completed_at) + '</strong></span>'
-                : '') +
-              dlTxt +
-            '</div>' +
-            '<div style="display:flex;gap:6px;flex-shrink:0;align-items:center">' +
-              (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
-                ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
-                  '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>'
-                : '') +
-              (isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
-                ? '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>'
-                : '') +
-              (_isMarkAttendanceAllowed() && isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
-                ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dMgrComplete(this)"><i class="fas fa-check-double"></i> Mark Done</button>' +
-                  '<button class="btn btn-sm" style="background:var(--Ol);color:var(--O);border:none" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dMgrShift(this)"><i class="fas fa-forward"></i> Shift</button>'
-                : '') +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    }).join('') +
-  '</div></div>';
-}).join('');
-    }
+            return '<div class="dcard" id="' + cardId + '" style="margin-bottom:8px;border:1px solid var(--bdr);border-radius:12px;overflow:hidden;background:var(--sur)">' +
+              '<div class="dc-top" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px;user-select:none" ' +
+              'onclick="_delegToggle(\'' + cardId + '\')">' +
+                '<div style="flex:1;min-width:0">' +
+                  '<div style="font-size:13.5px;font-weight:700;color:var(--tx);word-break:break-word;line-height:1.4">' + _esc(d.task_desc) + '</div>' +
+                '</div>' +
+                '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">' +
+                  _statusBadge(effStatus) +
+                  '<i class="fas fa-chevron-down dc-chev" style="font-size:12px;color:var(--tx3);transition:transform .2s"></i>' +
+                '</div>' +
+              '</div>' +
+              '<div class="dc-body" style="display:none;padding:10px 14px;border-top:1px solid var(--bdr);background:var(--sur2)">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">' +
+                  '<div style="display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12px;color:var(--tx2);align-items:center">' +
+                    (isOut
+                      ? '<span><i class="fas fa-user-check" style="color:var(--tx3);margin-right:4px"></i>To: <strong>' + _esc(d.delegated_to_name || d.delegated_to) + '</strong></span>'
+                      : '<span><i class="fas fa-user" style="color:var(--tx3);margin-right:4px"></i>By: <strong>' + _esc(d.delegated_by_name || d.delegated_by) + '</strong></span>') +
+                    '<span><i class="fas fa-calendar-plus" style="color:var(--tx3);margin-right:4px"></i>Assigned: <strong>' +
+                      (d.assigned_at ? _fmtDateTime(d.assigned_at) : _fmtDate(d.first_date)) + '</strong></span>' +
+                    '<span><i class="fas fa-flag-checkered" style="color:var(--tx3);margin-right:4px"></i>Due: <strong>' +
+                      _fmtDate(d.final_date) + '</strong></span>' +
+                    (d.status === 'Completed' && d.completed_at
+                      ? '<span style="color:var(--G)"><i class="fas fa-check-circle" style="margin-right:4px"></i>Completed: <strong>' + _fmtDateTime(d.completed_at) + '</strong></span>'
+                      : '') +
+                    dlTxt +
+                  '</div>' +
+                  '<div style="display:flex;gap:6px;flex-shrink:0;align-items:center">' +
+                    (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+                      ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
+                        '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>'
+                      : '') +
+                    (isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+                      ? '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>'
+                      : '') +
+                    (_isMarkAttendanceAllowed() && isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+                      ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dMgrComplete(this)"><i class="fas fa-check-double"></i> Mark Done</button>' +
+                        '<button class="btn btn-sm" style="background:var(--Ol);color:var(--O);border:none" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dMgrShift(this)"><i class="fas fa-forward"></i> Shift</button>'
+                      : '') +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('') +
+        '</div></div>';
+    }).join('');
+}
 
     function _delegGrpToggle(gid) {
       var b = document.getElementById(gid);
