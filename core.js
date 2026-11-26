@@ -3021,10 +3021,7 @@ if (_U && _U.need_location === false) {
     ];
 
     function _vCheck() {
-var at = localStorage.getItem('checkTab') || _ST || 'ctoday';
-var validIds = tabs.map(function (t) { return t.id; });
-if (validIds.indexOf(at) === -1) at = 'ctoday';
-_ST = at;
+      var at = _ST || 'ctoday';
       var tabs = [], panes = [];
 
       tabs.push({id: 'ctoday', lbl: '<i class="fas fa-calendar-day"></i> Today'});
@@ -4441,10 +4438,7 @@ _ST = at;
 
     function _vDeleg() {
       var isManager = _isManager();
-     var at = localStorage.getItem('delegTab') || _ST || 'dmine';
-var validIds = tabs.map(function (t) { return t.id; });
-if (validIds.indexOf(at) === -1) at = 'dmine';
-_ST = at;
+      var at = _ST || 'dmine';
       // Staff sees only "Assigned to Me"; Managers see all tabs
       var tabs = isManager
         ? TABS_DELEG
@@ -4803,85 +4797,122 @@ _ST = at;
       if (pane) _renderDelegCardsEl(dels, pane, isOut);
     }
 
-function _renderDelegCardsEl(dels, el, isOut) {
-  _delLastArgs = {dels: dels, el: el, isOut: isOut};
+    function _renderDelegCardsEl(dels, el, isOut) {
+      // Remember last args so sort buttons can re-render
+      _delLastArgs = {dels: dels, el: el, isOut: isOut};
 
-  if (!dels || !dels.length) {
-    el.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><h4>No Delegation Tasks</h4><p>Nothing to display here right now.</p></div>';
-    return;
-  }
+      if (!dels || !dels.length) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><h4>No Delegation Tasks</h4><p>Nothing to display here right now.</p></div>';
+        return;
+      }
 
-  var groups = [
-    {key: 'overdue', label: 'Overdue', icon: 'fa-triangle-exclamation', color: 'var(--R)', items: []},
-    {key: 'pending', label: 'Pending', icon: 'fa-hourglass-half', color: 'var(--O)', items: []},
-    {key: 'shifted', label: 'Shifted', icon: 'fa-calendar-days', color: 'var(--V)', items: []},
-    {key: 'cancelled', label: 'Cancelled', icon: 'fa-ban', color: 'var(--tx3)', items: []},
-    {key: 'completed', label: 'Completed', icon: 'fa-check-circle', color: 'var(--G)', items: []}
-  ];
-  dels.forEach(function (d) {
-    if (d.status === 'Completed') groups[4].items.push(d);
-    else if (d.status === 'Cancelled') groups[3].items.push(d);
-    else if (d.status === 'Shifted') groups[2].items.push(d);
-    else if (d.is_overdue && d.status !== 'Completed') groups[0].items.push(d);
-    else groups[1].items.push(d);
-  });
-  groups.forEach(function (g) { g.items = _delSortItems(g.items); });
+      // Group: Overdue → Pending → Shifted → Cancelled → Completed
+      var groups = [
+        {key: 'overdue', label: 'Overdue', icon: 'fa-triangle-exclamation', color: 'var(--R)', items: []},
+        {key: 'pending', label: 'Pending', icon: 'fa-hourglass-half', color: 'var(--O)', items: []},
+        {key: 'shifted', label: 'Shifted', icon: 'fa-calendar-days', color: 'var(--V)', items: []},
+        {key: 'cancelled', label: 'Cancelled', icon: 'fa-ban', color: 'var(--tx3)', items: []},
+        {key: 'completed', label: 'Completed', icon: 'fa-check-circle', color: 'var(--G)', items: []}
+      ];
+      dels.forEach(function (d) {
+        if (d.status === 'Completed') groups[4].items.push(d);
+        else if (d.status === 'Cancelled') groups[3].items.push(d);
+        else if (d.status === 'Shifted') groups[2].items.push(d);
+        else if (d.is_overdue && d.status !== 'Completed') groups[0].items.push(d);
+        else groups[1].items.push(d);
+      });
 
-  var totalDone = groups[4].items.length;
-  var totalOvr = groups[0].items.length;
-  var totalAct = groups[1].items.length + groups[2].items.length;
+      // Sort items inside each group
+      groups.forEach(function (g) {
+        g.items = _delSortItems(g.items);
+      });
 
-  el.innerHTML = _delSortBarHtml() +
-    '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">' +
-    '<div class="chip"><i class="fas fa-list"></i> ' + dels.length + '</div>' +
-    '<div class="chip" style="background:var(--Gl);color:var(--G)"><i class="fas fa-check-circle"></i> ' + totalDone + '</div>' +
-    '<div class="chip" style="background:var(--Ol);color:var(--O)"><i class="fas fa-hourglass"></i> ' + totalAct + '</div>' +
-    (totalOvr > 0 ? '<div class="chip" style="background:var(--Rl);color:var(--R)"><i class="fas fa-triangle-exclamation"></i> ' + totalOvr + '</div>' : '') +
-    '</div>' +
-    groups.filter(function (g) { return g.items.length; }).map(function (g) {
-      var gid = 'dlg_grp_' + g.key;
-      return '<div style="margin-bottom:14px">' +
-        '<div onclick="_delegGrpToggle(\'' + gid + '\')" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sur2);border-radius:8px;cursor:pointer;margin-bottom:6px">' +
-        '<i class="fas ' + g.icon + '" style="color:' + g.color + '"></i>' +
-        '<span style="font-weight:700;font-size:13px">' + g.label + ' (' + g.items.length + ')</span>' +
-        '<i class="fas fa-chevron-down" id="dgc_' + gid + '" style="margin-left:auto;font-size:11px;color:var(--tx3);transition:transform .2s;transform:rotate(180deg)"></i>' +
+      var totalDone = groups[4].items.length;
+      var totalOvr = groups[0].items.length;
+      var totalAct = groups[1].items.length + groups[2].items.length;
+
+      el.innerHTML =
+        _delSortBarHtml() +
+        // Summary chips
+        '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">' +
+        '<div class="chip"><i class="fas fa-list"></i> ' + dels.length + '</div>' +
+        '<div class="chip" style="background:var(--Gl);color:var(--G)"><i class="fas fa-check-circle"></i> ' + totalDone + '</div>' +
+        '<div class="chip" style="background:var(--Ol);color:var(--O)"><i class="fas fa-hourglass"></i> ' + totalAct + '</div>' +
+        (totalOvr > 0 ? '<div class="chip" style="background:var(--Rl);color:var(--R)"><i class="fas fa-triangle-exclamation"></i> ' + totalOvr + '</div>' : '') +
+        '<div style="flex:1"></div>' +
+        '<button class="btn btn-xs btn-outline" onclick="_delegExpandAll(true)"><i class="fas fa-expand-alt"></i> Expand All</button>' +
+        '<button class="btn btn-xs btn-outline" onclick="_delegExpandAll(false)"><i class="fas fa-compress-alt"></i> Collapse All</button>' +
         '</div>' +
-        '<div id="' + gid + '">' +
-        g.items.map(function (d) {
-          var cardId = 'dc_' + d.task_id;
-          var actions = '';
-          if (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled') {
-            actions += '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dComplete(this)"><i class="fas fa-check"></i> Complete</button> ';
-            actions += '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dShift(this)"><i class="fas fa-calendar-days"></i> Shift</button>';
-          }
-          if (isOut && d.status !== 'Completed' && d.status !== 'Cancelled') {
-            actions += '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="event.stopPropagation();_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>';
-          }
-          return '<div style="border:1px solid var(--bdr);border-radius:10px;margin-bottom:6px;background:#fff;overflow:hidden">' +
-            '<div onclick="_toggleDel(\'' + d.task_id + '\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 12px">' +
-            '<i class="fas fa-chevron-down" id="di_' + d.task_id + '" style="font-size:11px;color:var(--tx3);transition:transform .2s"></i>' +
-            '<span style="font-weight:600;flex:1">' + _esc(d.task_desc || d.task || '') + '</span>' +
-            '<span style="font-size:11px;color:var(--tx3)">' + _esc(d.status || '') + '</span>' +
+        // Groups
+        groups.filter(function (g) {return g.items.length > 0;}).map(function (g) {
+          var gid = 'dlg_grp_' + g.key;
+          var defaultCollapsed = (g.key === 'completed' || g.key === 'cancelled');
+          return '<div style="margin-bottom:14px">' +
+            '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--sur2);border-radius:8px;margin-bottom:6px;cursor:pointer;user-select:none" ' +
+            'onclick="_delegGrpToggle(' + JSON.stringify(gid) + ')">' +
+            '<i class="fas ' + g.icon + '" style="color:' + g.color + ';font-size:12px"></i>' +
+            '<span style="font-size:12px;font-weight:800;color:' + g.color + '">' + g.label + '</span>' +
+            '<span style="font-size:11px;color:var(--tx3);margin-left:4px">(' + g.items.length + ')</span>' +
+            '<i class="fas fa-chevron-down dgc" id="dgc_' + gid + '" style="margin-left:auto;font-size:10px;color:var(--tx3);transition:transform .2s;' +
+            (defaultCollapsed ? '' : 'transform:rotate(180deg)') + '"></i>' +
             '</div>' +
-            '<div id="dd_' + d.task_id + '" style="display:none;padding:10px 12px;border-top:1px solid var(--bd);font-size:12px">' +
-            '<div>To: ' + _esc(d.delegated_to_name || d.to_name || '') + '</div>' +
-            '<div>Due: ' + _fmtDate(d.final_date || d.first_date || '') + '</div>' +
-            (d.completion_remarks || d.remarks ? '<div style="margin-top:6px;padding:6px;background:var(--Il);border-radius:6px">' + _esc(d.completion_remarks || d.remarks) + '</div>' : '') +
-            '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">' + actions + '</div>' +
+            '<div id="' + gid + '" style="display:' + (defaultCollapsed ? 'none' : '') + '">' +
+            g.items.map(function (d, idx) {
+              var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
+              var cardId = 'dcard_' + g.key + '_' + idx;
+              var dl = _dl(d.final_date);
+              var dlTxt = dl === null ? '' :
+                dl < 0 ? '<span style="color:var(--R);font-weight:800"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
+                  dl === 0 ? '<span style="color:var(--O);font-weight:800"><i class="fas fa-clock"></i> Due Today</span>' :
+                    '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
+              return '<div class="dcard ' + g.key + '" id="' + cardId + '" style="margin-bottom:6px">' +
+                '<div class="dc-top" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" ' +
+                'onclick="_delegToggle(\'' + cardId + '\')">' +
+                '<div class="dc-desc" style="flex:1;padding-right:10px">' + _esc(d.task_desc) + '</div>' +
+                '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
+                _statusBadge(effStatus) +
+                '<i class="fas fa-chevron-down dc-chev" style="font-size:11px;color:var(--tx3);transition:transform .2s"></i>' +
+                '</div>' +
+                '</div>' +
+                '<div class="dc-body" style="display:none">' +
+                '<div class="dc-meta">' +
+                (isOut
+                  ? '<span><i class="fas fa-user-check"></i> To: <strong>' + _esc(d.delegated_to_name || d.delegated_to) + '</strong></span>'
+                  : '<span><i class="fas fa-user"></i> By: <strong>' + _esc(d.delegated_by_name || d.delegated_by) + '</strong></span>') +
+                '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-plus" style="color:var(--P)"></i> <strong>Assigned:</strong> ' +
+                (d.assigned_at ? _fmtDateTime(d.assigned_at) : _fmtDate(d.first_date)) + '</span>' +
+                '<span style="color:var(--O);font-weight:700"><i class="fas fa-flag-checkered" style="color:var(--O)"></i> <strong>Due:</strong> ' +
+                _fmtDate(d.final_date) + '</span>' +
+                (d.status === 'Completed' && d.completed_at
+                  ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-check-circle" style="color:var(--G)"></i> <strong>Completed:</strong> ' +
+                  _fmtDate(d.completed_at) + '</span>'
+                  : (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '')) +
+                (d.revision_1 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev1: ' + _fmtDate(d.revision_1) + '</span>' : '') +
+                (d.revision_2 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev2: ' + _fmtDate(d.revision_2) + '</span>' : '') +
+                (d.completion_remarks || d.remarks
+                  ? '<div style="margin-top:6px;padding:6px 10px;background:var(--Il);border-radius:6px;font-size:11px;color:var(--I);display:flex;align-items:flex-start;gap:6px"><i class="fas fa-comment-dots" style="margin-top:1px;flex-shrink:0"></i><span>' +
+                  _esc(d.completion_remarks || d.remarks) + '</span></div>'
+                  : '') +
+                '</div>' +
+                '<div class="dc-act">' +
+                (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+                  ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
+                  '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>'
+                  : '') +
+                (isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+                  ? '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>'
+                  : '') +
+                (_isMarkAttendanceAllowed() && isOut && d.status !== 'Completed' && d.status !== 'Cancelled'
+                  ? '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dMgrComplete(this)"><i class="fas fa-check-double"></i> Mark Done</button>' +
+                  '<button class="btn btn-sm" style="background:var(--Ol);color:var(--O);border:none" data-tid="' + _esc(d.task_id) + '" onclick="_dMgrShift(this)"><i class="fas fa-forward"></i> Shift</button>'
+                  : '') +
+                '</div>' +
+                '</div>' +
+                '</div>';
+            }).join('') +
             '</div></div>';
-        }).join('') +
-        '</div></div>';
-    }).join('');
-}
-
-function _toggleDel(id) {
-  var d = document.getElementById('dd_' + id);
-  var i = document.getElementById('di_' + id);
-  if (!d) return;
-  var open = d.style.display !== 'none';
-  d.style.display = open ? 'none' : 'block';
-  if (i) i.style.transform = open ? '' : 'rotate(180deg)';
-}
+        }).join('');
+    }
 
     function _delegGrpToggle(gid) {
       var b = document.getElementById(gid);
@@ -11505,48 +11536,57 @@ function _vAttend() {
         '</div>';
     }
 
-function _switchTab(tabId) {
-  _ST = tabId;
+    function _switchTab(tabId) {
+      _ST = tabId;
 
-  // Persist by view prefix
-  var key = null;
-  if (tabId.indexOf('a') === 0) key = 'attTab';
-  else if (tabId.indexOf('c') === 0) key = 'checkTab';
-  else if (tabId.indexOf('d') === 0) key = 'delegTab';
-  else if (tabId.indexOf('l') === 0) key = 'leaveTab';
-  else if (tabId.indexOf('em') === 0) key = 'emTab';
-  if (key) try { localStorage.setItem(key, tabId); } catch (e) {}
+      // Tab buttons
+      document.querySelectorAll('.tab').forEach(function (el) {
+        el.classList.toggle('active', el.getAttribute('data-tab') === tabId);
+      });
 
-  document.querySelectorAll('.tab').forEach(function (el) {
-    el.classList.toggle('active', el.getAttribute('data-tab') === tabId);
-  });
+      // Panes — switch active, NO animation on mobile (causes scroll jump)
+      var isMob = window.innerWidth <= 768;
+      document.querySelectorAll('.tab-pane').forEach(function (el) {
+        var isActive = el.id === tabId + 'Pane';
+        if (isActive && !el.classList.contains('active') && !isMob) {
+          // Only animate on desktop — mobile animation causes page jump
+          el.classList.remove('tab-enter');
+          el.classList.add('tab-enter');
+        }
+        el.classList.toggle('active', isActive);
+      });
 
-  var isMob = window.innerWidth <= 768;
-  document.querySelectorAll('.tab-pane').forEach(function (el) {
-    var isActive = el.id === tabId + 'Pane';
-    if (isActive && !el.classList.contains('active') && !isMob) {
-      el.classList.remove('tab-enter');
-      el.classList.add('tab-enter');
+      // Dispatch sub-tab loaders
+      var loaders = {
+        // Checklist
+        ctoday: _loadToday, cweek: _loadWeek, chist: _loadHist, csetup: _loadSetupTasks,
+        // Delegation
+        dmine: _loadDelMine, dout: _loadDelOut, dall: _loadDelAll, dcr: _loadDelCreate,
+        // Attendance — all tab IDs mapped to correct loader functions
+        amy: _loadMyAtt,
+        areg: _loadMyRegularizations, ala: _loadLeaveApprovals,
+        arega: _loadRegApprovals, aana: _loadAttAnalytics,
+        cmteam: _loadTeamChecklist,
+        amteam: _loadTeamAtt,
+        // legacy aliases kept for safety
+        amyatt: _loadMyAtt, amstr: _loadMustTab,
+        // Performance Reports module removed — pteam loader kept as a
+        // harmless no-op stub since nothing currently routes to it.
+        pteam: _loadTeamPerf,
+        // Leave management
+        lreq: _loadMyLeaves, lbal: _loadLeaveBalance, lcal: _loadLeaveCalView, lsumm: _loadLeaveSummTab, lapprv: _loadLeaveApprovals,
+        // EM Weekly Meeting
+        emwm: _vEMWeeklyMeeting,
+        // EM Increment Appraisal
+        emap: _vEMAppraisal
+      };
+
+      if (loaders[tabId]) {
+        try {loaders[tabId]();} catch (e) {console.warn('[_switchTab] loader error for ' + tabId + ': ' + e.message);}
+      }
+      // Apply responsive post-render fixes after tab switches
+      _debouncedPostRender();
     }
-    el.classList.toggle('active', isActive);
-  });
-
-  var loaders = {
-    ctoday: _loadToday, cweek: _loadWeek, chist: _loadHist, csetup: _loadSetupTasks,
-    cmteam: _loadTeamChecklist,
-    dmine: _loadDelMine, dout: _loadDelOut, dall: _loadDelAll, dcr: _loadDelCreate,
-    amy: _loadMyAtt, areg: _loadMyRegularizations, arega: _loadRegApprovals,
-    amteam: _loadTeamAtt, afield: _loadFieldAttendance,
-    lreq: _loadMyLeaves, lbal: _loadLeaveBalance, lcal: _loadLeaveCalView,
-    lsumm: _loadLeaveSummTab, lapprv: _loadLeaveApprovals,
-    emwm: _vEMWeeklyMeeting, emap: _vEMAppraisal
-  };
-
-  if (loaders[tabId]) {
-    try { loaders[tabId](); } catch (e) { console.warn('[_switchTab] ' + tabId + ': ' + e.message); }
-  }
-  _debouncedPostRender();
-}
 
     /* ── _responsivePostRender ───────────────────────────────────────────────
        Called after every view/tab load. Ensures all dynamically rendered
@@ -12018,91 +12058,79 @@ function _switchTab(tabId) {
     }
 
 
-function _renderCkList() {
-  var el = document.getElementById('ckList');
-  if (!el) return;
-  var date = document.getElementById('ckDate') ? document.getElementById('ckDate').value : _today();
-  var tasks = _ckSortedTasks(_D.todayTasks || []);
+    function _renderCkList() {
+      var el = document.getElementById('ckList');
+      if (!el) return;
+      var date = document.getElementById('ckDate') ? document.getElementById('ckDate').value : _today();
+      var tasks = _ckSortedTasks(_D.todayTasks || []);
 
-  if (!tasks.length) {
-    el.innerHTML = _ckSortBarHtml() +
-      '<div class="empty-state"><i class="fas fa-list-check"></i><h4>No Tasks</h4>' +
-      '<p>No tasks are scheduled for ' + _fmtDate(date) + '.</p></div>';
-    return;
-  }
+      if (!tasks.length) {
+        el.innerHTML = _ckSortBarHtml() +
+          '<div class="empty-state"><i class="fas fa-list-check"></i><h4>No Tasks</h4>' +
+          '<p>No tasks are scheduled for ' + _fmtDate(date) + '.</p></div>';
+        return;
+      }
 
-  el.innerHTML = _ckSortBarHtml() + tasks.map(function (t) {
-    var isDone = t.status === 'Done';
-    var isTransOut = !!(t.is_transferred);
-    var isReceived = !!(t.is_received);
-    var canDo = !isDone && !isTransOut;
-    var isTodayView = (date === _today());
-    var canEditRemark = isDone && !isTransOut && isTodayView;
+      el.innerHTML = _ckSortBarHtml() + tasks.map(function (t) {
+        var isDone = t.status === 'Done';
+        var isTransOut = !!(t.is_transferred);
+        var isReceived = !!(t.is_received);
+        var canDo = !isDone && !isTransOut;
+        var isTodayView = (date === _today());
+        var canEditRemark = isDone && !isTransOut && isTodayView;
 
-    var actualFmt = t.actual ? _tsShort(t.actual) : '';
-    var planFmt = '';
-    if (t.scheduled_time && t.planned) {
-      planFmt = _fmtDate(t.planned) + ' ' + t.scheduled_time;
-    } else if (t.scheduled_time) {
-      planFmt = t.scheduled_time;
+        var actualFmt = t.actual ? _tsShort(t.actual) : '';
+        var planFmt = '';
+        if (t.scheduled_time && t.planned) {
+          planFmt = _fmtDate(t.planned) + ' ' + t.scheduled_time;
+        } else if (t.scheduled_time) {
+          planFmt = t.scheduled_time;
+        }
+
+        var rowId = 'ckrow_' + t.row_num + '_' + Math.random().toString(36).slice(2, 7);
+        var sc = _colorForStatus(t.status);
+        var rowBorder = isReceived ? 'border-left:3px solid var(--V)' : '';
+
+        var actionBtn = '';
+        if (canDo) {
+          actionBtn = '<button class="ck-btn btn btn-sm btn-xs" onclick="_markDone(\'' + rowId + '\')"><i class="fas fa-check"></i> Done</button>';
+        } else if (canEditRemark) {
+          var safeRemark = String(t.remark || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          actionBtn = '<button class="btn btn-outline btn-sm btn-xs" onclick="_editDoneRemark(\'' + rowId + '\',\'' + safeRemark + '\')"><i class="fas fa-pen"></i> Edit remark</button>';
+        }
+
+        return '<div class="anim-item" id="' + rowId + '" data-row="' + t.row_num + '" data-occ="' + t.occ +
+          '" data-uid="' + _esc(t.task_uid || '') + '" data-planned="' + _esc(t.planned || '') +
+          '" data-name="' + _esc(t.task_name || '') + '" data-dt="' + _esc(date) +
+          '" style="display:flex;align-items:flex-start;gap:12px;padding:13px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;margin-bottom:8px;' + rowBorder + '">' +
+          '<div class="ck-circle" style="width:24px;height:24px;border-radius:50%;border:2px solid ' + sc +
+          ';background:' + (isDone ? sc : 'transparent') +
+          ';flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:' +
+          (canDo ? 'pointer' : 'default') + ';margin-top:1px" ' +
+          (canDo ? 'onclick="_markDone(\'' + rowId + '\')"' : '') + '>' +
+          (isDone ? '<i class="fas fa-check" style="font-size:10px;color:#fff"></i>' : '') +
+          '</div>' +
+          '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13.5px;font-weight:700;' +
+          (isDone || isTransOut ? 'text-decoration:line-through;color:var(--tx3)' : '') +
+          ';word-break:break-word">' + _esc(t.task_name) + '</div>' +
+          '<div style="font-size:11px;color:var(--tx3);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
+          _freqBadge(t.frequency) +
+          (isTransOut ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Ol);color:var(--O);font-weight:700;font-size:10.5px"><i class="fas fa-share"></i> Transferred away</span>' : '') +
+          (isReceived ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Vl);color:var(--V);font-weight:700;font-size:10.5px"><i class="fas fa-arrow-right-arrow-left"></i> Transferred to you</span>' +
+            (t.transfer_by ? '<span style="color:var(--tx3);font-size:10.5px"> by ' + _esc(t.transfer_by) + '</span>' : '') : '') +
+          (t.remark ? '<span style="padding:2px 8px;border-radius:8px;background:var(--Il);color:var(--I);font-size:10.5px;font-weight:600"><i class="fas fa-comment-dots"></i> ' + _esc(t.remark) + '</span>' : '') +
+          '<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center">' +
+          (planFmt ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:8px;background:var(--Pl);color:var(--P);font-size:10.5px;font-weight:800"><i class="fas fa-calendar-clock" style="font-size:10px"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
+          (actualFmt
+            ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:8px;background:var(--Gl);color:var(--G);font-size:10.5px;font-weight:800"><i class="fas fa-check-circle" style="font-size:10px"></i> Actual: <strong>' + actualFmt + '</strong></span>'
+            : (planFmt && !isDone ? '<span style="padding:2px 9px;border-radius:8px;background:var(--sur2);color:var(--tx3);font-size:10.5px;border:1px solid var(--bdr)">Actual: pending</span>' : '')) +
+          '</div></div></div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +
+          _statusBadge(t.status) + actionBtn +
+          '</div></div>';
+      }).join('');
     }
-
-    var rowId = 'ckrow_' + t.row_num + '_' + Math.random().toString(36).slice(2, 7);
-    var sc = _colorForStatus(t.status);
-    var rowBorder = isReceived ? 'border-left:3px solid var(--V)' : '';
-
-    var actionBtn = '';
-    if (canDo) {
-      actionBtn = '<button class="ck-btn btn btn-sm btn-xs" onclick="event.stopPropagation();_markDone(\'' + rowId + '\')"><i class="fas fa-check"></i> Done</button>';
-    } else if (canEditRemark) {
-      var safeRemark = String(t.remark || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      actionBtn = '<button class="btn btn-outline btn-sm btn-xs" onclick="event.stopPropagation();_editDoneRemark(\'' + rowId + '\',\'' + safeRemark + '\')"><i class="fas fa-pen"></i> Edit</button>';
-    }
-
-    var detailHtml =
-      '<div class="anim-item" id="' + rowId + '" data-row="' + t.row_num + '" data-occ="' + t.occ +
-      '" data-uid="' + _esc(t.task_uid || '') + '" data-planned="' + _esc(t.planned || '') +
-      '" data-name="' + _esc(t.task_name || '') + '" data-dt="' + _esc(date) +
-      '" style="display:flex;align-items:flex-start;gap:12px;padding:10px 0">' +
-      '<div class="ck-circle" style="width:24px;height:24px;border-radius:50%;border:2px solid ' + sc +
-      ';display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer' +
-      (isDone ? ';background:' + sc : '') + '"' +
-      (canDo ? ' onclick="event.stopPropagation();_markDone(\'' + rowId + '\')"' : '') + '>' +
-      (isDone ? '<i class="fas fa-check" style="font-size:10px;color:#fff"></i>' : '') +
-      '</div>' +
-      '<div style="flex:1;min-width:0">' +
-      '<div style="font-size:11px;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
-      _freqBadge(t.frequency) +
-      (isTransOut ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Ol);color:var(--O);font-weight:700;font-size:10.5px"><i class="fas fa-share"></i> Transferred</span>' : '') +
-      (isReceived ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Vl);color:var(--V);font-weight:700;font-size:10.5px"><i class="fas fa-arrow-right-arrow-left"></i> Received</span>' : '') +
-      (t.remark ? '<span style="padding:2px 8px;border-radius:8px;background:var(--Il);color:var(--I);font-size:10.5px"><i class="fas fa-comment-dots"></i> ' + _esc(t.remark) + '</span>' : '') +
-      '</div>' +
-      '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">' +
-      (planFmt ? '<span style="padding:2px 9px;border-radius:8px;background:var(--Pl);color:var(--P);font-size:10.5px;font-weight:700">Plan: ' + _esc(planFmt) + '</span>' : '') +
-      (actualFmt ? '<span style="padding:2px 9px;border-radius:8px;background:var(--Gl);color:var(--G);font-size:10.5px;font-weight:700">Actual: ' + actualFmt + '</span>' : '') +
-      '</div></div>' +
-      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">' + actionBtn + '</div>' +
-      '</div>';
-
-    return '<div style="border:1px solid var(--bdr);border-radius:12px;margin-bottom:8px;background:var(--sur);overflow:hidden;' + rowBorder + '">' +
-      '<div onclick="_toggleCk(\'' + rowId + '\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px">' +
-      '<i class="fas fa-chevron-down" id="cki_' + rowId + '" style="font-size:11px;color:var(--tx3);transition:transform .2s"></i>' +
-      '<span style="font-weight:600;flex:1;' + (isDone || isTransOut ? 'text-decoration:line-through;color:var(--tx3)' : '') + '">' + _esc(t.task_name) + '</span>' +
-      _statusBadge(t.status) +
-      '</div>' +
-      '<div id="ckd_' + rowId + '" style="display:none;padding:0 14px 12px">' + detailHtml + '</div>' +
-      '</div>';
-  }).join('');
-}
-
-function _toggleCk(id) {
-  var d = document.getElementById('ckd_' + id);
-  var i = document.getElementById('cki_' + id);
-  if (!d) return;
-  var open = d.style.display !== 'none';
-  d.style.display = open ? 'none' : 'block';
-  if (i) i.style.transform = open ? '' : 'rotate(180deg)';
-}
 
 
     function _editDoneRemark(rowId, currentRemark) {
@@ -16026,25 +16054,4 @@ function _renderFieldList() {
       (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
       '</div></div>';
   }).join('');
-}
-
-function _toggleTaskDetail(id) {
-  var detail = document.getElementById('td_' + id);
-  var ico = document.getElementById('ti_' + id);
-  if (!detail) return;
-  var open = detail.style.display !== 'none';
-  detail.style.display = open ? 'none' : 'block';
-  if (ico) ico.style.transform = open ? '' : 'rotate(180deg)';
-}
-
-function _taskCard(id, title, status, detailHtml) {
-  return '<div style="border:1px solid var(--bd);border-radius:10px;margin-bottom:8px;background:#fff;overflow:hidden">' +
-    '<div onclick="_toggleTaskDetail(\'' + id + '\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px">' +
-    '<i class="fas fa-chevron-down" id="ti_' + id + '" style="font-size:11px;color:var(--tx3);transition:transform .2s"></i>' +
-    '<span style="font-weight:600;flex:1">' + _esc(title) + '</span>' +
-    '<span style="font-size:11px;color:var(--tx3)">' + _esc(status || '') + '</span>' +
-    '</div>' +
-    '<div id="td_' + id + '" style="display:none;padding:12px 14px;border-top:1px solid var(--bd);font-size:13px">' +
-    (detailHtml || '') +
-    '</div></div>';
 }
