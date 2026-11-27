@@ -15927,7 +15927,7 @@ function _showFieldAttendance() {
           '<div style="font-weight:700;font-size:14px">' + _esc(r.emp_name) + '</div>' +
           '<div style="font-size:12px;color:var(--tx3);margin-top:2px">' + _esc(r.dept) + '</div>' +
           '<div style="font-size:13px;margin-top:6px">' + _esc(r.date) + ' · <b>' + _esc(r.check_in) + '</b></div>' +
-          (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px"><a href="https://www.google.com/maps?q=' + r.captured_lat + ',' + r.captured_lng + '" target="_blank" style="color:var(--P);text-decoration:none;font-weight:600">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</a></div>' : '') + (r.captured_address ? '<div style="font-size:11.5px;color:var(--tx3);margin-top:2px;line-height:1.4">' + _esc(r.captured_address) + '</div>' : '') +
+          (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px"><a href="https://www.google.com/maps?q=' + r.captured_lat + ',' + r.captured_lng + '" target="_blank" style="color:var(--P);text-decoration:underline;font-weight:600">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</a></div>' : '') + (r.captured_address ? '<div style="font-size:11.5px;color:var(--tx3);margin-top:2px;line-height:1.4">' + _esc(r.captured_address) + '</div>' : '') +
           (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
           '</div></div>';
       });
@@ -15988,7 +15988,7 @@ function _renderFieldAttendance() {
         '<div style="font-weight:700">' + _esc(r.emp_name) + '</div>' +
         '<div style="font-size:12px;color:var(--tx3)">' + _esc(r.dept) + '</div>' +
         '<div style="font-size:13px;margin-top:4px">' + _esc(r.date) + ' · <b>' + _esc(r.check_in) + '</b></div>' +
-        (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px"><a href="https://www.google.com/maps?q=' + r.captured_lat + ',' + r.captured_lng + '" target="_blank" style="color:var(--P);text-decoration:none;font-weight:600">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</a></div>' : '') + (r.captured_address ? '<div style="font-size:11.5px;color:var(--tx3);margin-top:2px;line-height:1.4">' + _esc(r.captured_address) + '</div>' : '') +
+        (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px"><a href="https://www.google.com/maps?q=' + r.captured_lat + ',' + r.captured_lng + '" target="_blank" style="color:var(--P);text-decoration:underline;font-weight:600">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</a></div>' : '') + (r.captured_address ? '<div style="font-size:11.5px;color:var(--tx3);margin-top:2px;line-height:1.4">' + _esc(r.captured_address) + '</div>' : '') +
         (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
         '</div></div>';
     });
@@ -16074,7 +16074,7 @@ function _renderFieldList() {
       '<div style="font-weight:700">' + _esc(r.emp_name) + '</div>' +
       '<div style="font-size:12px;color:var(--tx3)">' + _esc(r.dept) + '</div>' +
       '<div style="font-size:13px;margin-top:4px">' + _esc(r.date) + ' · <b>' + _esc(r.check_in) + '</b></div>' +
-      (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px"><a href="https://www.google.com/maps?q=' + r.captured_lat + ',' + r.captured_lng + '" target="_blank" style="color:var(--P);text-decoration:none;font-weight:600">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</a></div>' : '') + (r.captured_address ? '<div style="font-size:11.5px;color:var(--tx3);margin-top:2px;line-height:1.4">' + _esc(r.captured_address) + '</div>' : '') +
+      (r.captured_lat ? '<div style="font-size:12px;color:var(--tx2);margin-top:4px"><a href="https://www.google.com/maps?q=' + r.captured_lat + ',' + r.captured_lng + '" target="_blank" style="color:var(--P);text-decoration:underline;font-weight:600">📍 ' + r.captured_lat + ', ' + r.captured_lng + '</a></div>' : '') + (r.captured_address ? '<div style="font-size:11.5px;color:var(--tx3);margin-top:2px;line-height:1.4">' + _esc(r.captured_address) + '</div>' : '') +
       (r.photo_url ? '<a href="' + r.photo_url + '" target="_blank" style="font-size:12px;color:var(--P);margin-top:6px;display:inline-block">Open Photo</a>' : '') +
       '</div></div>';
   }).join('');
